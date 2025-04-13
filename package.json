@@ -1,0 +1,5 @@
+{
+  "name": "scheduly",
+  "private": true,
+  "workspaces": ["apps/*", "libs/*"]
+}
