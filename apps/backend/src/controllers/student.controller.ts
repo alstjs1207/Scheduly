@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
 import { StudentService } from '../services/student.service';
-import { Student, Prisma } from '../generated/prisma';
+import { Student, Prisma } from '@prisma/client';
 
 @Controller('api/students')
 export class StudentController {

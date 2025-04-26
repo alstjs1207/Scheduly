@@ -6,13 +6,7 @@ services:
       context: ./apps/frontend
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
-    environment:
-      - NODE_ENV=development
-      - REACT_APP_API_URL=http://backend:3000
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
+      - "80:80"
     depends_on:
       - backend
 
@@ -23,35 +17,30 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - DATABASE_HOST=db
-      - DATABASE_PORT=3306
-      - DATABASE_USER=root
-      - DATABASE_PASSWORD=password
-      - DATABASE_NAME=scheduly
-    volumes:
-      - ./apps/backend:/app
-      - /app/node_modules
+      - DATABASE_URL=mysql://root:password@db:3306/scheduly
+      - NODE_ENV=production
     depends_on:
       db:
         condition: service_healthy
 
   db:
     image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=scheduly
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: scheduly
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
-    command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
-      interval: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=password"]
+      interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
 volumes:
   mysql_data: 

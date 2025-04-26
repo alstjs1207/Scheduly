@@ -1,7 +1,7 @@
 // src/services/student.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
-import { Prisma, Student, StudentState } from '../generated/prisma';
+import { Prisma, Student, StudentState } from '@prisma/client';
 
 @Injectable()
 export class StudentService {
