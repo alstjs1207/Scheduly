@@ -36,8 +36,15 @@ const StudentCreate: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { endDate, ...data } = formData;
-      const payload = endDate ? formData : data;
+      const { endDate, startDate, ...data } = formData;
+      
+      // ISO-8601 형식으로 날짜 변환
+      const payload = {
+        ...data,
+        startDate: startDate ? new Date(startDate).toISOString() : undefined,
+        ...(endDate ? { endDate: new Date(endDate).toISOString() } : {})
+      };
+      
       await axios.post("/api/students", payload);
       alert("수강생이 성공적으로 등록되었습니다.");
       setFormData({

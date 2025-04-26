@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum StudentState {
+  NORMAL
+  GRADUATE
+  DELETED
+}
+
+enum StudentType {
+  EXAMINEE
+  DROPPER
+  ADULT
+}
+
+model Student {
+  id          Int         @id @default(autoincrement())
+  name        String
+  state       StudentState @default(NORMAL)
+  type        StudentType
+  region      String
+  age         String
+  description String      @default("")
+  startDate   DateTime    @db.Date
+  endDate     DateTime?   @db.Date
+  parentInfo  String
+  phoneNumber String
+}

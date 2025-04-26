@@ -16,6 +16,18 @@ interface Student {
   phoneNumber?: string;
 }
 
+// 날짜를 YYYY.MM.DD 형식으로 변환하는 함수
+const formatDate = (dateString: string | undefined): string => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Seoul'
+  }).split(' ').join('').slice(0, -1); // "2024. 04. 01." -> "2024.04.01"
+};
+
 const typeMapping: Record<string, string> = {
   EXAMINEE: "입시생",
   DROPPER: "재수생",
@@ -173,13 +185,13 @@ const StudentList: React.FC = () => {
               {selectedStudent.startDate && (
                 <>
                   <p className="font-medium text-gray-700 dark:text-gray-300">수업 시작일:</p>
-                  <p className="text-gray-900 dark:text-gray-100">{selectedStudent.startDate}</p>
+                  <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedStudent.startDate)}</p>
                 </>
               )}
               {selectedStudent.endDate && (
                 <>
                   <p className="font-medium text-gray-700 dark:text-gray-300">수업 종료일:</p>
-                  <p className="text-gray-900 dark:text-gray-100">{selectedStudent.endDate}</p>
+                  <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedStudent.endDate)}</p>
                 </>
               )}
               {selectedStudent.parentInfo && (

@@ -1,5 +1,13 @@
 {
   "name": "scheduly",
   "private": true,
-  "workspaces": ["apps/*", "libs/*"]
+  "workspaces": ["apps/*", "libs/*"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm run start --workspace=apps/frontend",
+    "dev:backend": "npm run start --workspace=apps/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }

@@ -1,36 +1,40 @@
 // src/services/student.service.ts
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Student, StudentState } from '../entities/student.entity';
+import { PrismaService } from './prisma.service';
+import { Prisma, Student, StudentState } from '../generated/prisma';
 
 @Injectable()
 export class StudentService {
-  constructor(
-    @InjectRepository(Student)
-    private readonly studentRepository: Repository<Student>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  async createStudent(studentData: Partial<Student>): Promise<Student> {
-    const student = this.studentRepository.create(studentData);
-    return this.studentRepository.save(student);
+  async createStudent(studentData: Prisma.StudentCreateInput): Promise<Student> {
+    return this.prisma.student.create({
+      data: studentData,
+    });
   }
 
   async getStudents(): Promise<Student[]> {
-    return this.studentRepository.find();
+    return this.prisma.student.findMany();
   }
 
   async getStudentById(id: number): Promise<Student | null> {
-    return this.studentRepository.findOne({where: {id}});
+    return this.prisma.student.findUnique({
+      where: { id },
+    });
   }
 
-  async updateStudent(id: number, updateData: Partial<Student>): Promise<Student | null> {
-    await this.studentRepository.update(id, updateData);
-    return this.getStudentById(id);
+  async updateStudent(id: number, updateData: Prisma.StudentUpdateInput): Promise<Student | null> {
+    return this.prisma.student.update({
+      where: { id },
+      data: updateData,
+    });
   }
 
   async deleteStudent(id: number): Promise<void> {
-    await this.studentRepository.update(id, { state: StudentState.DELETED });
+    await this.prisma.student.update({
+      where: { id },
+      data: { state: StudentState.DELETED },
+    });
   }
 }
 
