@@ -22,6 +22,7 @@ enum StudentType {
 
 model Student {
   id          Int         @id @default(autoincrement())
+  externalId  String      @unique @default(dbgenerated("(REPLACE(UUID(), '-', ''))"))
   name        String
   state       StudentState @default(NORMAL)
   type        StudentType
@@ -32,4 +33,29 @@ model Student {
   endDate     DateTime?   @db.Date
   parentInfo  String
   phoneNumber String
+  schedules   Schedule[]
+
+  @@index([externalId])
+}
+
+model Schedule {
+  id              Int       @id @default(autoincrement())
+  studentId       Int
+  student         Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title           String
+  startTime       String
+  endTime         String
+  date            DateTime    @db.Date
+  isRecurring     Boolean   @default(false)
+  recurrenceRule  String?
+  recurrenceEndDate String?
+  parentScheduleId Int?
+  parent         Schedule?  @relation("RecurringSchedules", fields: [parentScheduleId], references: [id], onDelete: Cascade)
+  children       Schedule[] @relation("RecurringSchedules")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([studentId])
+  @@index([date])
+  @@index([parentScheduleId])
 }

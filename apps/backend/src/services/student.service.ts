@@ -23,6 +23,16 @@ export class StudentService {
     });
   }
 
+  async getStudentByExternalId(externalId: string): Promise<Student | null> {
+    return this.prisma.student.findFirst({
+      where: {
+        externalId: {
+          equals: externalId,
+        },
+      },
+    });
+  }
+
   async updateStudent(id: number, updateData: Prisma.StudentUpdateInput): Promise<Student | null> {
     return this.prisma.student.update({
       where: { id },
