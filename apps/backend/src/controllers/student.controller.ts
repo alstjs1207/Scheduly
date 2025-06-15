@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { StudentService } from '../services/student.service';
 import { Student, Prisma } from '@prisma/client';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 @Controller('api/students')
+@UseGuards(JwtAuthGuard)
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 

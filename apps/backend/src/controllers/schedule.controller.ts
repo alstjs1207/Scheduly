@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { ScheduleService } from '../services/schedule.service';
 import { CreateScheduleDto, UpdateScheduleDto, DeleteScheduleDto } from '../dto/schedule.dto';
 import { Schedule } from '@prisma/client';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 @Controller('api/schedules')
+@UseGuards(JwtAuthGuard)
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
 
