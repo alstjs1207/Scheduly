@@ -12,6 +12,7 @@ CREATE TABLE `Student` (
     `endDate` DATE NULL,
     `parentInfo` VARCHAR(191) NOT NULL,
     `phoneNumber` VARCHAR(191) NOT NULL,
+    `color` VARCHAR(191) NOT NULL DEFAULT '#3B82F6',
 
     UNIQUE INDEX `Student_externalId_key`(`externalId`),
     INDEX `Student_externalId_idx`(`externalId`),
@@ -33,7 +34,7 @@ CREATE TABLE `Schedule` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    INDEX `Schedule_studentExternalId_idx`(`studentExternalId`),
+    INDEX `Schedule_studentId_idx`(`studentId`),
     INDEX `Schedule_date_idx`(`date`),
     INDEX `Schedule_parentScheduleId_idx`(`parentScheduleId`),
     PRIMARY KEY (`id`)

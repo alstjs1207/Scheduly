@@ -33,6 +33,7 @@ model Student {
   endDate     DateTime?   @db.Date
   parentInfo  String
   phoneNumber String
+  color       String      @default("#3B82F6")
   schedules   Schedule[]
 
   @@index([externalId])
