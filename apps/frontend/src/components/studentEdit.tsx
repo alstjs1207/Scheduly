@@ -29,6 +29,7 @@ interface Student {
   parentInfo?: string;
   phoneNumber?: string;
   color?: string;
+  password?: string;
 }
 
 const typeOptions = [
@@ -120,8 +121,8 @@ const StudentEdit: React.FC<{ studentId: number }> = ({ studentId }) => {
             홈으로
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 bg-white shadow-md rounded-lg">
-          <h2 className="text-xl font-bold mb-4">수강생 수정</h2>
+        <form onSubmit={handleSubmit} className="p-6 bg-white shadow-md rounded-lg space-y-4">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">수강생 정보 수정</h2>
           <input 
             type="text" 
             name="name" 
@@ -228,6 +229,21 @@ const StudentEdit: React.FC<{ studentId: number }> = ({ studentId }) => {
                 랜덤 색상
               </button>
             </div>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              비밀번호
+            </label>
+            <input
+              type="password"
+              name="password"
+              id="password"
+              placeholder="변경할 비밀번호를 입력하세요"
+              value={formData.password || ''}
+              onChange={handleChange}
+              className="block w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+            />
+            <p className="text-sm text-gray-500">비밀번호를 변경하지 않으려면 비워두세요.</p>
           </div>
           <div className="flex justify-end space-x-2">
             <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">수정</button>
