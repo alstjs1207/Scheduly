@@ -108,7 +108,7 @@ const StudentSearchModal: React.FC<StudentSearchModalProps> = ({
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto max-h-[400px]">
           {loading ? (
             <div className="flex justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
