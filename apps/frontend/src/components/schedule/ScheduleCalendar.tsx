@@ -50,8 +50,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
       title: `${schedule.student.name}`,
       start: startDateTime,
       end: endDateTime,
-      backgroundColor: schedule.isRecurring ? '#3B82F6' : '#6B7280',
-      borderColor: schedule.isRecurring ? '#2563EB' : '#4B5563',
+      backgroundColor: schedule.student.color,
+      borderColor: schedule.student.color,
       allDay: false,
       extendedProps: {
         schedule: {

@@ -11,6 +11,7 @@ export interface Student {
   endDate: string;
   parentInfo: string;
   phoneNumber: string;
+  color: string;
 }
 
 export interface Schedule {
