@@ -11,7 +11,7 @@ export const getStudents = async (params?: { state?: string }): Promise<Student[
   }
 };
 
-export const getStudent = async (id: string): Promise<Student> => {
+export const getStudent = async (id: number): Promise<Student> => {
   try {
     const response = await axios.get<Student>(`/api/students/${id}`);
     return response.data;

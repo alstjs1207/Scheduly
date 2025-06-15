@@ -7,7 +7,7 @@ interface ScheduleDetailModalProps {
   schedule: Schedule | null;
   onEdit: (schedule: Schedule) => void;
   onDelete: (schedule: Schedule, options: ScheduleDeleteOptions) => void;
-  onStudentClick: (studentId: string) => void;
+  onStudentClick: (studentId: number) => void;
 }
 
 const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
@@ -26,8 +26,16 @@ const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
   };
 
   const handleDelete = (deleteType: 'single' | 'future') => {
-    onDelete(schedule, { deleteType });
-    onClose();
+    if (!schedule) return;
+
+    const message = deleteType === 'single' 
+      ? '이 일정을 삭제하시겠습니까?' 
+      : '이 일정과 이후의 모든 반복 일정을 삭제하시겠습니까?';
+
+    if (window.confirm(message)) {
+      onDelete(schedule, { deleteType });
+      onClose();
+    }
   };
 
   return (
@@ -58,7 +66,7 @@ const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
           <div>
             <span className="font-medium text-gray-700">수강생:</span>{' '}
             <button
-              onClick={() => onStudentClick(schedule.studentExternalId)}
+              onClick={() => onStudentClick(schedule.studentId)}
               className="text-blue-600 hover:underline"
             >
               {schedule.student.name}
@@ -89,18 +97,27 @@ const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
           >
             수정
           </button>
-          <button
-            onClick={() => handleDelete('single')}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            삭제
-          </button>
-          {schedule.isRecurring && (
+          {schedule.isRecurring ? (
+            <>
+              <button
+                onClick={() => handleDelete('single')}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                이 일정만 삭제
+              </button>
+              <button
+                onClick={() => handleDelete('future')}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                이후 일정 모두 삭제
+              </button>
+            </>
+          ) : (
             <button
-              onClick={() => handleDelete('future')}
+              onClick={() => handleDelete('single')}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
             >
-              이후 일정 모두 삭제
+              삭제
             </button>
           )}
         </div>

@@ -1,13 +1,8 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsDate } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsNumber, IsBoolean, IsOptional, IsDate } from 'class-validator';
 
 export class CreateScheduleDto {
   @IsNumber()
   studentId: number;
-
-  @IsString()
-  @IsOptional()
-  title?: string;
 
   @IsString()
   startTime: string;
@@ -15,13 +10,11 @@ export class CreateScheduleDto {
   @IsString()
   endTime: string;
 
-  @Type(() => Date)
-  @IsDate()
-  date: Date;
+  @IsString()
+  date: string;
 
   @IsBoolean()
-  @IsOptional()
-  isRecurring?: boolean;
+  isRecurring: boolean;
 
   @IsString()
   @IsOptional()
@@ -30,20 +23,30 @@ export class CreateScheduleDto {
   @IsString()
   @IsOptional()
   recurrenceEndDate?: string;
-
-  @IsNumber()
-  @IsOptional()
-  parentScheduleId?: number;
 }
 
-export class UpdateScheduleDto extends CreateScheduleDto {
+export class UpdateScheduleDto {
+  @IsNumber()
+  @IsOptional()
+  studentId?: number;
+
   @IsString()
   @IsOptional()
-  editType?: 'single' | 'future';
+  startTime?: string;
+
+  @IsString()
+  @IsOptional()
+  endTime?: string;
+
+  @IsString()
+  @IsOptional()
+  date?: string;
+
+  @IsString()
+  editType: 'single' | 'future';
 }
 
 export class DeleteScheduleDto {
   @IsString()
-  @IsOptional()
-  deleteType?: 'single' | 'future';
+  deleteType: 'single' | 'future';
 } 

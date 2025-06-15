@@ -22,7 +22,7 @@ enum StudentType {
 
 model Student {
   id          Int         @id @default(autoincrement())
-  externalId  String      @unique @default(dbgenerated("(REPLACE(UUID(), '-', ''))"))
+  externalId  String      @unique @default(uuid())
   name        String
   state       StudentState @default(NORMAL)
   type        StudentType

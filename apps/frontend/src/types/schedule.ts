@@ -15,7 +15,7 @@ export interface Student {
 
 export interface Schedule {
   id: string;
-  studentExternalId: string;
+  studentId: number;
   student: Student;
   title: string;
   startTime: string;
@@ -24,7 +24,7 @@ export interface Schedule {
   isRecurring: boolean;
   recurrenceRule?: string;
   recurrenceEndDate?: string;
-  parentScheduleId?: string;
+  parentScheduleId?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,7 +35,7 @@ export interface RecurrenceOption {
 }
 
 export interface ScheduleFormData {
-  studentExternalId: string;
+  studentId: number;
   startTime: string;
   endTime: string;
   date: string;
@@ -44,7 +44,6 @@ export interface ScheduleFormData {
 
 export interface ScheduleEditOptions {
   editType: 'single' | 'future';
-  data: Partial<ScheduleFormData>;
 }
 
 export interface ScheduleDeleteOptions {

@@ -26,7 +26,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
   };
 
   const [formData, setFormData] = useState<ScheduleFormData>({
-    studentExternalId: '',
+    studentId: 0,
     startTime: '09:00',
     endTime: '09:30',
     date: selectedDate,
@@ -52,7 +52,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
     if (isOpen) {
       if (mode === 'create') {
         setFormData({
-          studentExternalId: '',
+          studentId: 0,
           startTime: '18:00',
           endTime: '21:00',
           date: selectedDate,
@@ -64,7 +64,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
         setSelectedStudent(null);
       } else if (selectedSchedule) {
         setFormData({
-          studentExternalId: selectedSchedule.studentExternalId,
+          studentId: selectedSchedule.studentId,
           startTime: selectedSchedule.startTime,
           endTime: selectedSchedule.endTime,
           date: formatDate(selectedSchedule.date),
@@ -73,12 +73,12 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
             endDate: selectedSchedule.recurrenceEndDate ? formatDate(selectedSchedule.recurrenceEndDate) : '2025-10-15'
           }
         });
-        fetchStudent(selectedSchedule.studentExternalId);
+        fetchStudent(selectedSchedule.studentId);
       }
     }
   }, [isOpen, mode, selectedDate, selectedSchedule]);
 
-  const fetchStudent = async (studentId: string) => {
+  const fetchStudent = async (studentId: number) => {
     try {
       const student = await getStudent(studentId);
       setSelectedStudent(student);
@@ -107,7 +107,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
 
   const handleStudentSelect = (student: Student) => {
     setSelectedStudent(student);
-    handleInputChange('studentExternalId', student.externalId);
+    handleInputChange('studentId', student.id);
     setIsStudentSearchOpen(false);
   };
 

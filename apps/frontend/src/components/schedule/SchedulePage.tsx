@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Schedule, ScheduleFormData, ScheduleEditOptions, ScheduleDeleteOptions } from '../../types/schedule';
 import ScheduleCalendar from './ScheduleCalendar';
-import { RRule } from 'rrule';
 import { getSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../api/schedule';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,6 +20,7 @@ const SchedulePage: React.FC = () => {
       setSchedules(response);
     } catch (error) {
       console.error('Failed to fetch schedules:', error);
+      alert('일정을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -29,10 +29,12 @@ const SchedulePage: React.FC = () => {
   const handleScheduleCreate = async (data: ScheduleFormData) => {
     try {
       setLoading(true);
-      await createSchedule(data);
-      await fetchSchedules();
+      const newSchedules = await createSchedule(data);
+      const schedulesToAdd = Array.isArray(newSchedules) ? newSchedules : [newSchedules];
+      setSchedules(prev => [...prev, ...schedulesToAdd]);
     } catch (error) {
       console.error('Failed to create schedule:', error);
+      alert('일정 생성에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -41,10 +43,24 @@ const SchedulePage: React.FC = () => {
   const handleScheduleUpdate = async (id: string, data: ScheduleFormData & ScheduleEditOptions) => {
     try {
       setLoading(true);
-      await updateSchedule(id, data);
-      await fetchSchedules();
+      const updatedSchedules = await updateSchedule(id, data);
+      const schedulesToUpdate = Array.isArray(updatedSchedules) ? updatedSchedules : [updatedSchedules];
+      setSchedules(prev => {
+        const filtered = prev.filter(schedule => {
+          if (data.editType === 'single') {
+            return schedule.id !== id;
+          }
+          if (data.editType === 'future') {
+            const targetSchedule = prev.find(s => s.id === id);
+            return !targetSchedule || new Date(schedule.date) < new Date(targetSchedule.date);
+          }
+          return true;
+        });
+        return [...filtered, ...schedulesToUpdate];
+      });
     } catch (error) {
       console.error('Failed to update schedule:', error);
+      alert('일정 수정에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -54,15 +70,30 @@ const SchedulePage: React.FC = () => {
     try {
       setLoading(true);
       await deleteSchedule(id, options);
-      await fetchSchedules();
+      setSchedules(prev => {
+        const targetSchedule = prev.find(s => s.id === id);
+        if (!targetSchedule) return prev;
+
+        if (options.deleteType === 'single' || !targetSchedule.isRecurring) {
+          return prev.filter(s => s.id !== id);
+        }
+
+        // 이후 일정 모두 삭제
+        return prev.filter(schedule => {
+          const isPartOfSeries = schedule.id === id || schedule.parentScheduleId === parseInt(id);
+          if (!isPartOfSeries) return true;
+          return new Date(schedule.date) < new Date(targetSchedule.date);
+        });
+      });
     } catch (error) {
       console.error('Failed to delete schedule:', error);
+      alert('일정 삭제에 실패했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStudentClick = (studentId: string) => {
+  const handleStudentClick = (studentId: number) => {
     navigate(`/students/${studentId}`);
   };
 

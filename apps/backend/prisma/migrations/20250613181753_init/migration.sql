@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE `Student` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `externalId` VARCHAR(191) NOT NULL,
+    `externalId` VARCHAR(191) NOT NULL DEFAULT (UUID()),
     `name` VARCHAR(191) NOT NULL,
     `state` ENUM('NORMAL', 'GRADUATE', 'DELETED') NOT NULL DEFAULT 'NORMAL',
     `type` ENUM('EXAMINEE', 'DROPPER', 'ADULT') NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE `Student` (
 -- CreateTable
 CREATE TABLE `Schedule` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `studentExternalId` VARCHAR(191) NOT NULL,
+    `studentId` INTEGER NOT NULL,
     `title` VARCHAR(191) NOT NULL,
     `startTime` VARCHAR(191) NOT NULL,
     `endTime` VARCHAR(191) NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE `Schedule` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Schedule` ADD CONSTRAINT `Schedule_studentExternalId_fkey` FOREIGN KEY (`studentExternalId`) REFERENCES `Student`(`externalId`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `Schedule` ADD CONSTRAINT `Schedule_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `Student`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Schedule` ADD CONSTRAINT `Schedule_parentScheduleId_fkey` FOREIGN KEY (`parentScheduleId`) REFERENCES `Schedule`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

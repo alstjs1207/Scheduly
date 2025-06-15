@@ -3,6 +3,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import rrulePlugin from '@fullcalendar/rrule';
 import { Schedule } from '../../types/schedule';
 import ScheduleModal from './ScheduleModal';
 import ScheduleDetailModal from './ScheduleDetailModal';
@@ -12,7 +13,7 @@ interface ScheduleCalendarProps {
   onScheduleCreate: (schedule: any) => void;
   onScheduleUpdate: (id: string, schedule: any) => void;
   onScheduleDelete: (id: string, options: any) => void;
-  onStudentClick: (studentId: string) => void;
+  onStudentClick: (studentId: number) => void;
 }
 
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
@@ -30,24 +31,34 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 
   // ISO 날짜 문자열을 YYYY-MM-DD 형식으로 변환하는 함수
   const formatDate = (isoDate: string): string => {
-    return isoDate.split('T')[0];
+    const date = new Date(isoDate);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // FullCalendar 이벤트 형식으로 변환
-  const calendarEvents = schedules.map(schedule => ({
-    id: schedule.id,
-    title: `${schedule.student.name}`,
-    start: `${formatDate(schedule.date)}T${schedule.startTime}`,
-    end: `${formatDate(schedule.date)}T${schedule.endTime}`,
-    backgroundColor: schedule.isRecurring ? '#3B82F6' : '#6B7280',
-    borderColor: schedule.isRecurring ? '#2563EB' : '#4B5563',
-    extendedProps: {
-      schedule: {
-        ...schedule,
-        studentName: schedule.student.name
+  const calendarEvents = schedules.map(schedule => {
+    const startDateTime = `${formatDate(schedule.date)}T${schedule.startTime}`;
+    const endDateTime = `${formatDate(schedule.date)}T${schedule.endTime}`;
+    
+    return {
+      id: schedule.id,
+      title: `${schedule.student.name}`,
+      start: startDateTime,
+      end: endDateTime,
+      backgroundColor: schedule.isRecurring ? '#3B82F6' : '#6B7280',
+      borderColor: schedule.isRecurring ? '#2563EB' : '#4B5563',
+      allDay: false,
+      extendedProps: {
+        schedule: {
+          ...schedule,
+          studentName: schedule.student.name
+        }
       }
-    }
-  }));
+    };
+  });
 
   const handleDateClick = (info: any) => {
     const clickedDate = info.dateStr;
@@ -102,7 +113,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleScheduleDelete = (schedule: Schedule, options: any) => {
+  const handleScheduleDelete = (schedule: Schedule, options: { deleteType: 'single' | 'future' }) => {
     const today = new Date().toISOString().split('T')[0];
     
     // 과거 날짜는 삭제 불가
@@ -122,7 +133,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
         
         <div className="bg-white rounded-lg shadow border">
           <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, rrulePlugin]}
             initialView="dayGridMonth"
             headerToolbar={{
               left: 'prev,next today',
@@ -138,6 +149,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
             weekends={true}
             height="auto"
             locale="ko"
+            timeZone="Asia/Seoul"
+            slotMinTime="06:00:00"
+            slotMaxTime="24:00:00"
             buttonText={{
               today: '오늘',
               month: '월',

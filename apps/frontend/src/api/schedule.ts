@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Schedule, ScheduleFormData, ScheduleEditOptions } from '../types/schedule';
+import { Schedule, ScheduleFormData, ScheduleEditOptions, ScheduleDeleteOptions } from '../types/schedule';
 
 const toISOString = (date: string | undefined): string | null => {
   if (!date) return null;
@@ -16,7 +16,7 @@ export const getSchedules = async (): Promise<Schedule[]> => {
   }
 };
 
-export const createSchedule = async (data: ScheduleFormData): Promise<Schedule> => {
+export const createSchedule = async (data: ScheduleFormData): Promise<Schedule[]> => {
   try {
     const { recurrence, ...scheduleData } = data;
     const payload = {
@@ -26,7 +26,7 @@ export const createSchedule = async (data: ScheduleFormData): Promise<Schedule> 
       recurrenceRule: recurrence.type === 'weekly' ? 'FREQ=WEEKLY' : null,
       recurrenceEndDate: recurrence.type === 'weekly' ? toISOString(recurrence.endDate) : null
     };
-    const response = await axios.post<Schedule>('/api/schedules', payload);
+    const response = await axios.post<Schedule[]>('/api/schedules', payload);
     return response.data;
   } catch (error) {
     console.error('Failed to create schedule:', error);
@@ -37,7 +37,7 @@ export const createSchedule = async (data: ScheduleFormData): Promise<Schedule> 
 export const updateSchedule = async (
   id: string,
   data: ScheduleFormData & ScheduleEditOptions
-): Promise<Schedule> => {
+): Promise<Schedule[]> => {
   try {
     const { recurrence, editType, ...scheduleData } = data;
     const payload = {
@@ -48,7 +48,7 @@ export const updateSchedule = async (
       recurrenceEndDate: recurrence.type === 'weekly' ? toISOString(recurrence.endDate) : null,
       editType
     };
-    const response = await axios.put<Schedule>(`/api/schedules/${id}`, payload);
+    const response = await axios.put<Schedule[]>(`/api/schedules/${id}`, payload);
     return response.data;
   } catch (error) {
     console.error('Failed to update schedule:', error);
@@ -58,7 +58,7 @@ export const updateSchedule = async (
 
 export const deleteSchedule = async (
   id: string,
-  options: { deleteType: 'single' | 'future' }
+  options: ScheduleDeleteOptions
 ): Promise<void> => {
   try {
     await axios.delete(`/api/schedules/${id}`, { data: options });
