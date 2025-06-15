@@ -180,36 +180,71 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
           </div>
 
           {/* 시간 설정 */}
-          <div className="mb-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                시작 시간 *
-              </label>
-              <select
-                value={formData.startTime}
-                onChange={(e) => handleInputChange('startTime', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                {timeOptions.map(time => (
-                  <option key={time} value={time}>{time}</option>
-                ))}
-              </select>
+          <div className="mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  시작 시간 *
+                </label>
+                <select
+                  value={formData.startTime}
+                  onChange={(e) => {
+                    const newStartTime = e.target.value;
+                    handleInputChange('startTime', newStartTime);
+                    // 기존 종료 시간 유지
+                    handleInputChange('endTime', formData.endTime);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                >
+                  {timeOptions.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  종료 시간 *
+                </label>
+                <select
+                  value={formData.endTime}
+                  onChange={(e) => handleInputChange('endTime', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                >
+                  {timeOptions.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                종료 시간 *
-              </label>
-              <select
-                value={formData.endTime}
-                onChange={(e) => handleInputChange('endTime', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
+            <div className="flex gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const startHour = parseInt(formData.startTime.split(':')[0]);
+                  const startMinute = formData.startTime.split(':')[1];
+                  const endHour = (startHour + 3) % 24;
+                  const endTime = `${endHour.toString().padStart(2, '0')}:${startMinute}`;
+                  handleInputChange('endTime', endTime);
+                }}
+                className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
               >
-                {timeOptions.map(time => (
-                  <option key={time} value={time}>{time}</option>
-                ))}
-              </select>
+                1타임 (3시간)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const startHour = parseInt(formData.startTime.split(':')[0]);
+                  const startMinute = formData.startTime.split(':')[1];
+                  const endHour = (startHour + 6) % 24;
+                  const endTime = `${endHour.toString().padStart(2, '0')}:${startMinute}`;
+                  handleInputChange('endTime', endTime);
+                }}
+                className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              >
+                2타임 (6시간)
+              </button>
             </div>
           </div>
 
