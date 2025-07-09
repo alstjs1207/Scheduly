@@ -185,8 +185,8 @@ export class ScheduleService {
     await this.prisma.schedule.deleteMany({
       where: {
         OR: [
-          { id: parseInt(id) },
-          { parentScheduleId: parseInt(id) },
+          { id: schedule.id },
+          { parentScheduleId: schedule.parentScheduleId },
         ],
         date: {
           gte: schedule.date,

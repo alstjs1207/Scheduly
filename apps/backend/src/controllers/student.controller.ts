@@ -17,7 +17,6 @@ export class StudentController {
 
   @Get()
   async getStudents(): Promise<Student[]> {
-    this.logger.debug('GET /api/students 요청 받음');
     return this.studentService.getStudents();
   }
 

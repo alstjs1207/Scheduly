@@ -80,9 +80,17 @@ const SchedulePage: React.FC = () => {
 
         // 이후 일정 모두 삭제
         return prev.filter(schedule => {
-          const isPartOfSeries = schedule.id === id || schedule.parentScheduleId === parseInt(id);
+          const scheduleDate = new Date(schedule.date);
+          const targetDate = new Date(targetSchedule.date);
+          const isPartOfSeries = 
+            (schedule.parentScheduleId && targetSchedule.parentScheduleId && 
+             schedule.parentScheduleId === targetSchedule.parentScheduleId) || 
+            schedule.id === targetSchedule.parentScheduleId?.toString() ||
+            schedule.parentScheduleId === parseInt(id) ||
+            schedule.id === id;
+          
           if (!isPartOfSeries) return true;
-          return new Date(schedule.date) < new Date(targetSchedule.date);
+          return scheduleDate < targetDate;
         });
       });
     } catch (error) {
