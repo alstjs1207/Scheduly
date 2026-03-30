@@ -50,12 +50,15 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const now = nowKST();
   const currentYear = now.year;
   const currentMonth = now.month + 1; // nowKST returns 0-indexed month
+  const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+  const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
-  const [student, weeklySchedules, nextWeekSchedules, monthlySchedules, totalHours, authUser] = await Promise.all([
+  const [student, weeklySchedules, nextWeekSchedules, monthlySchedules, nextMonthSchedules, totalHours, authUser] = await Promise.all([
     getStudentById(client, { organizationId, studentId: params.studentId }),
     getStudentWeeklySchedules(client, { studentId: params.studentId }),
     getStudentNextWeekSchedules(client, { studentId: params.studentId }),
     getStudentSchedules(client, { studentId: params.studentId, year: currentYear, month: currentMonth }),
+    getStudentSchedules(client, { studentId: params.studentId, year: nextMonthYear, month: nextMonth }),
     calculateStudentTotalHours(client, { studentId: params.studentId }),
     adminClient.auth.admin.getUserById(params.studentId),
   ]);
@@ -67,8 +70,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     weeklySchedules,
     nextWeekSchedules,
     monthlySchedules,
+    nextMonthSchedules,
     currentYear,
     currentMonth,
+    nextMonthYear,
+    nextMonth,
     totalHours: Math.round(totalHours * 10) / 10,
     email,
   };
@@ -91,11 +97,12 @@ const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 export default function StudentDetailScreen({
   loaderData,
 }: Route.ComponentProps) {
-  const { student, weeklySchedules, nextWeekSchedules, monthlySchedules, currentYear, currentMonth, totalHours, email } = loaderData;
+  const { student, weeklySchedules, nextWeekSchedules, monthlySchedules, nextMonthSchedules, currentYear, currentMonth, nextMonthYear, nextMonth, totalHours, email } = loaderData;
   const graduateFetcher = useFetcher();
   const deleteFetcher = useFetcher();
   const inviteFetcher = useFetcher<{ success: boolean; error?: string }>();
-  const [copied, setCopied] = useState(false);
+  const [copiedCurrent, setCopiedCurrent] = useState(false);
+  const [copiedNext, setCopiedNext] = useState(false);
 
   const calculateAge = (birthDate: string) => {
     const today = new Date();
@@ -326,100 +333,197 @@ export default function StudentDetailScreen({
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>{currentYear}년 {currentMonth}월 일정</CardTitle>
-            <CardDescription>이번 달의 수업 일정입니다.</CardDescription>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={monthlySchedules.length === 0}
-            onClick={() => {
-              const lines = monthlySchedules.map((schedule) => {
-                const startDate = new Date(schedule.start_time);
-                const endDate = new Date(schedule.end_time);
-                const dateStr = startDate.toLocaleDateString("ko-KR", {
-                  month: "long",
-                  day: "numeric",
-                });
-                const day = dayLabels[startDate.getDay()];
-                const startTime = startDate.toLocaleTimeString("ko-KR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                const endTime = endDate.toLocaleTimeString("ko-KR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                const program = schedule.program?.title || "-";
-                return `${dateStr} (${day}) ${startTime}-${endTime} ${program}`;
-              });
-              const text = `[${student.name}] ${currentYear}년 ${currentMonth}월 일정\n${lines.join("\n")}`;
-              navigator.clipboard.writeText(text).then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              });
-            }}
-          >
-            {copied ? (
-              <><CheckIcon className="h-4 w-4 mr-1" />복사됨</>
-            ) : (
-              <><ClipboardIcon className="h-4 w-4 mr-1" />복사</>
-            )}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {monthlySchedules.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">
-              이번 달 등록된 일정이 없습니다.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>날짜</TableHead>
-                  <TableHead className="hidden md:table-cell">요일</TableHead>
-                  <TableHead>클래스</TableHead>
-                  <TableHead>시간</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlySchedules.map((schedule) => {
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>{currentYear}년 {currentMonth}월 일정</CardTitle>
+              <CardDescription>이번 달의 수업 일정입니다.</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={monthlySchedules.length === 0}
+              onClick={() => {
+                const lines = monthlySchedules.map((schedule) => {
                   const startDate = new Date(schedule.start_time);
                   const endDate = new Date(schedule.end_time);
-                  return (
-                    <TableRow key={schedule.schedule_id}>
-                      <TableCell>
-                        {startDate.toLocaleDateString("ko-KR", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{dayLabels[startDate.getDay()]}</TableCell>
-                      <TableCell>
-                        {schedule.program?.title || "-"}
-                      </TableCell>
-                      <TableCell>
-                        {startDate.toLocaleTimeString("ko-KR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                        {" - "}
-                        {endDate.toLocaleTimeString("ko-KR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  const dateStr = startDate.toLocaleDateString("ko-KR", {
+                    month: "long",
+                    day: "numeric",
+                  });
+                  const day = dayLabels[startDate.getDay()];
+                  const startTime = startDate.toLocaleTimeString("ko-KR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  const endTime = endDate.toLocaleTimeString("ko-KR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  const program = schedule.program?.title || "-";
+                  return `${dateStr} (${day}) ${startTime}-${endTime} ${program}`;
+                });
+                const text = `[${student.name}] ${currentYear}년 ${currentMonth}월 일정\n${lines.join("\n")}`;
+                navigator.clipboard.writeText(text).then(() => {
+                  setCopiedCurrent(true);
+                  setTimeout(() => setCopiedCurrent(false), 2000);
+                });
+              }}
+            >
+              {copiedCurrent ? (
+                <><CheckIcon className="h-4 w-4 mr-1" />복사됨</>
+              ) : (
+                <><ClipboardIcon className="h-4 w-4 mr-1" />복사</>
+              )}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {monthlySchedules.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">
+                이번 달 등록된 일정이 없습니다.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>날짜</TableHead>
+                    <TableHead className="hidden md:table-cell">요일</TableHead>
+                    <TableHead>클래스</TableHead>
+                    <TableHead>시간</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monthlySchedules.map((schedule) => {
+                    const startDate = new Date(schedule.start_time);
+                    const endDate = new Date(schedule.end_time);
+                    return (
+                      <TableRow key={schedule.schedule_id}>
+                        <TableCell>
+                          {startDate.toLocaleDateString("ko-KR", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{dayLabels[startDate.getDay()]}</TableCell>
+                        <TableCell>
+                          {schedule.program?.title || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {startDate.toLocaleTimeString("ko-KR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {" - "}
+                          {endDate.toLocaleTimeString("ko-KR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>{nextMonthYear}년 {nextMonth}월 일정</CardTitle>
+              <CardDescription>다음 달의 수업 일정입니다.</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={nextMonthSchedules.length === 0}
+              onClick={() => {
+                const lines = nextMonthSchedules.map((schedule) => {
+                  const startDate = new Date(schedule.start_time);
+                  const endDate = new Date(schedule.end_time);
+                  const dateStr = startDate.toLocaleDateString("ko-KR", {
+                    month: "long",
+                    day: "numeric",
+                  });
+                  const day = dayLabels[startDate.getDay()];
+                  const startTime = startDate.toLocaleTimeString("ko-KR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  const endTime = endDate.toLocaleTimeString("ko-KR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  const program = schedule.program?.title || "-";
+                  return `${dateStr} (${day}) ${startTime}-${endTime} ${program}`;
+                });
+                const text = `[${student.name}] ${nextMonthYear}년 ${nextMonth}월 일정\n${lines.join("\n")}`;
+                navigator.clipboard.writeText(text).then(() => {
+                  setCopiedNext(true);
+                  setTimeout(() => setCopiedNext(false), 2000);
+                });
+              }}
+            >
+              {copiedNext ? (
+                <><CheckIcon className="h-4 w-4 mr-1" />복사됨</>
+              ) : (
+                <><ClipboardIcon className="h-4 w-4 mr-1" />복사</>
+              )}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {nextMonthSchedules.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">
+                다음 달 등록된 일정이 없습니다.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>날짜</TableHead>
+                    <TableHead className="hidden md:table-cell">요일</TableHead>
+                    <TableHead>클래스</TableHead>
+                    <TableHead>시간</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {nextMonthSchedules.map((schedule) => {
+                    const startDate = new Date(schedule.start_time);
+                    const endDate = new Date(schedule.end_time);
+                    return (
+                      <TableRow key={schedule.schedule_id}>
+                        <TableCell>
+                          {startDate.toLocaleDateString("ko-KR", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{dayLabels[startDate.getDay()]}</TableCell>
+                        <TableCell>
+                          {schedule.program?.title || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {startDate.toLocaleTimeString("ko-KR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {" - "}
+                          {endDate.toLocaleTimeString("ko-KR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
