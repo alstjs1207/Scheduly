@@ -101,30 +101,30 @@ export default function ScheduleForm({
         {mode === "create" ? (
           <div className="space-y-2 md:col-span-2">
             <Label>수강생 * {selectedStudents.size > 0 && <span className="text-muted-foreground text-xs font-normal">({selectedStudents.size}명 선택됨)</span>}</Label>
-            <div className="rounded-md border p-3 space-y-2 max-h-48 overflow-y-auto">
-              <div className="flex items-center space-x-2 pb-2 border-b">
-                <Checkbox
-                  id="select-all"
-                  checked={allSelected}
-                  onCheckedChange={toggleAll}
-                />
-                <label htmlFor="select-all" className="text-sm font-medium">전체 선택</label>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={allSelected ? "default" : "outline"}
+                size="sm"
+                onClick={toggleAll}
+              >
+                전체 선택
+              </Button>
               {students.map((student) => (
-                <div key={student.profile_id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`student-${student.profile_id}`}
-                    checked={selectedStudents.has(student.profile_id)}
-                    onCheckedChange={() => toggleStudent(student.profile_id)}
+                <Button
+                  key={student.profile_id}
+                  type="button"
+                  variant={selectedStudents.has(student.profile_id) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleStudent(student.profile_id)}
+                  className="flex items-center gap-1.5"
+                >
+                  <div
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: student.color || "#3B82F6" }}
                   />
-                  <label htmlFor={`student-${student.profile_id}`} className="flex items-center gap-2 text-sm">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: student.color || "#3B82F6" }}
-                    />
-                    {student.name}
-                  </label>
-                </div>
+                  {student.name}
+                </Button>
               ))}
             </div>
             {selectedStudents.size === 0 && (
