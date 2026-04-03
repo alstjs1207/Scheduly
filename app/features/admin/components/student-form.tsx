@@ -37,6 +37,12 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state !== "idle";
   const [classEndDate, setClassEndDate] = useState(defaultValues?.class_end_date || "");
+  const [color, setColor] = useState(defaultValues?.color || "#3B82F6");
+
+  const randomizeColor = () => {
+    const hex = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+    setColor(hex);
+  };
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const startDate = e.target.value;
@@ -83,7 +89,7 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="type">유형 *</Label>
-          <Select name="type" defaultValue={defaultValues?.type || ""} required>
+          <Select name="type" defaultValue={defaultValues?.type || "EXAMINEE"} required>
             <SelectTrigger>
               <SelectValue placeholder="유형 선택" />
             </SelectTrigger>
@@ -123,12 +129,11 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="birth_date">생년월일 *</Label>
+          <Label htmlFor="birth_date">생년월일</Label>
           <Input
             id="birth_date"
             name="birth_date"
             type="date"
-            required
             defaultValue={defaultValues?.birth_date}
           />
         </div>
@@ -195,13 +200,19 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="color">캘린더 색상</Label>
-          <Input
-            id="color"
-            name="color"
-            type="color"
-            defaultValue={defaultValues?.color || "#3B82F6"}
-            className="h-10 w-20"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              id="color"
+              name="color"
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="h-10 w-20"
+            />
+            <Button type="button" variant="outline" size="sm" onClick={randomizeColor}>
+              랜덤
+            </Button>
+          </div>
         </div>
       </div>
 
