@@ -144,9 +144,13 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
               defaultValue={defaultValues?.slug}
               placeholder="calligraphy-beginner"
             />
-            <p className="text-xs text-muted-foreground">
-              공개 URL: /class/[슬러그]
-            </p>
+            {fetcher.data?.error ? (
+              <p className="text-xs text-destructive">{fetcher.data.error}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                공개 URL: /class/[슬러그]
+              </p>
+            )}
           </div>
 
           <div className="space-y-2 md:col-span-2">

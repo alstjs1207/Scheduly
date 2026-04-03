@@ -69,7 +69,9 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   // 먼저 프로그램 생성 (ID 획득)
-  const program = await createProgram(client, {
+  let program;
+  try {
+    program = await createProgram(client, {
     organization_id: organizationId,
     instructor_id: instructorId,
     title,
@@ -85,9 +87,16 @@ export async function action({ request }: Route.ActionArgs) {
     duration_minutes: durationMinutes || 120,
     total_sessions: totalSessions || 4,
     curriculum,
-    max_capacity: maxCapacity || null,
-    is_public: isPublic,
-  });
+      max_capacity: maxCapacity || null,
+      is_public: isPublic,
+    });
+  } catch (err: unknown) {
+    const pgError = err as { code?: string };
+    if (pgError?.code === "23505") {
+      return data({ error: "이미 사용 중인 URL 슬러그입니다. 다른 슬러그를 입력해주세요." }, { status: 400 });
+    }
+    throw err;
+  }
 
   // 커버 이미지 업로드
   const coverImageFile = formData.get("cover_image") as File | null;
