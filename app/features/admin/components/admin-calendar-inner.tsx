@@ -32,6 +32,8 @@ interface AdminCalendarInnerProps {
   onDateClick?: (date: Date) => void;
   onEventClick?: (scheduleId: number) => void;
   onDatesSet?: (dateInfo: DatesSetArg) => void;
+  onDaySelect?: (date: Date) => void;
+  selectedDate?: Date | null;
 }
 
 export default function AdminCalendarInner({
@@ -40,11 +42,17 @@ export default function AdminCalendarInner({
   onDateClick,
   onEventClick,
   onDatesSet,
+  onDaySelect,
+  selectedDate,
 }: AdminCalendarInnerProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   const handleDateClick = (arg: DateClickArg) => {
+    if (onDaySelect) {
+      onDaySelect(arg.date);
+      return;
+    }
     if (onDateClick) {
       onDateClick(arg.date);
     } else {
@@ -55,6 +63,7 @@ export default function AdminCalendarInner({
       navigate(`/admin/schedules/new?date=${dateStr}`);
     }
   };
+
 
   const handleEventClick = (arg: EventClickArg) => {
     const scheduleId = arg.event.extendedProps.scheduleId as number;
@@ -150,6 +159,17 @@ export default function AdminCalendarInner({
         eventContent={renderEventContent}
         eventDidMount={handleEventDidMount}
         datesSet={onDatesSet}
+        dayCellClassNames={(arg) => {
+          if (
+            selectedDate &&
+            arg.date.getFullYear() === selectedDate.getFullYear() &&
+            arg.date.getMonth() === selectedDate.getMonth() &&
+            arg.date.getDate() === selectedDate.getDate()
+          ) {
+            return ["fc-day-selected"];
+          }
+          return [];
+        }}
         locale="ko"
         buttonText={{
           today: "오늘",
@@ -343,13 +363,19 @@ export default function AdminCalendarInner({
         .dark .admin-calendar .fc-scrollgrid th {
           border-color: oklch(1 0 0 / 10%) !important;
         }
-        /* More link */
+        /* "+more" is informational only — date cell click opens side panel */
         .admin-calendar .fc-more-link {
-          color: var(--primary);
+          pointer-events: none !important;
+          cursor: default !important;
+          color: var(--muted-foreground);
           font-weight: 500;
         }
-        .admin-calendar .fc-more-link:hover {
-          opacity: 0.8;
+        /* Selected day */
+        .admin-calendar .fc-day-selected {
+          box-shadow: inset 0 0 0 2px oklch(0.205 0 0) !important;
+        }
+        .dark .admin-calendar .fc-day-selected {
+          box-shadow: inset 0 0 0 2px oklch(0.488 0.243 264.376) !important;
         }
         /* Mobile responsive styles */
         @media (max-width: 767px) {

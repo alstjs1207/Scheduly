@@ -30,6 +30,8 @@ interface AdminCalendarProps {
   onDateClick?: (date: Date) => void;
   onEventClick?: (scheduleId: number) => void;
   onDatesSet?: (dateInfo: DatesSetArg) => void;
+  onDaySelect?: (date: Date) => void;
+  selectedDate?: Date | null;
 }
 
 export default function AdminCalendar(props: AdminCalendarProps) {

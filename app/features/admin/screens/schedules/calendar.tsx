@@ -1,8 +1,9 @@
 import type { Route } from "./+types/calendar";
 import type { DatesSetArg } from "@fullcalendar/core";
 
-import { Link, useSearchParams } from "react-router";
-import { ListIcon, PlusIcon } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import { ListIcon, PlusIcon, XIcon } from "lucide-react";
 
 import { Button } from "~/core/components/ui/button";
 import { useIsMobile } from "~/core/hooks/use-mobile";
@@ -54,12 +55,134 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { events, year, month };
 }
 
+function DaySchedulePanel({
+  date,
+  events,
+  onClose,
+}: {
+  date: Date;
+  events: {
+    id: string;
+    start: string;
+    extendedProps: {
+      scheduleId: number;
+      studentName: string;
+      programName: string | null;
+      studentColor: string;
+    };
+  }[];
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const dateStr = `${year}-${month}-${day}`;
+
+  const dateLabel = date.toLocaleDateString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+
+  const sorted = [...events].sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+  );
+
+  return (
+    <div className="rounded-xl border bg-card shadow-sm flex flex-col overflow-hidden" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        <div>
+          <p className="font-semibold text-sm">{dateLabel}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {sorted.length > 0 ? `${sorted.length}개 일정` : "일정 없음"}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" variant="outline" className="h-7 text-xs px-2.5" asChild>
+            <Link to={`/admin/schedules/new?date=${dateStr}`}>
+              <PlusIcon className="h-3 w-3 mr-1" />
+              등록
+            </Link>
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={onClose}
+          >
+            <XIcon className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Event list */}
+      <div className="flex-1 overflow-y-auto">
+        {sorted.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <p className="text-sm text-muted-foreground">일정이 없습니다</p>
+            <Link
+              to={`/admin/schedules/new?date=${dateStr}`}
+              className="text-xs text-primary hover:underline"
+            >
+              일정 등록하기 →
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {sorted.map((event) => {
+              const start = new Date(event.start);
+              const timeStr = start.toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              });
+              const color = event.extendedProps.studentColor;
+
+              return (
+                <button
+                  key={event.id}
+                  type="button"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left cursor-pointer"
+                  onClick={() =>
+                    navigate(`/admin/schedules/${event.extendedProps.scheduleId}/edit`)
+                  }
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-xs text-muted-foreground w-10 shrink-0 tabular-nums">
+                    {timeStr}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {event.extendedProps.studentName}
+                    </p>
+                    {event.extendedProps.programName && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {event.extendedProps.programName}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ScheduleCalendarScreen({
   loaderData,
 }: Route.ComponentProps) {
   const { events, year, month } = loaderData;
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const handleDatesSet = (dateInfo: DatesSetArg) => {
     const viewStart = dateInfo.view.currentStart;
@@ -71,8 +194,20 @@ export default function ScheduleCalendarScreen({
 
     if (newYear !== currentYear || newMonth !== currentMonth) {
       setSearchParams({ year: String(newYear), month: String(newMonth) });
+      setSelectedDate(null);
     }
   };
+
+  const selectedDateEvents = selectedDate
+    ? events.filter((e) => {
+        const d = new Date(e.start);
+        return (
+          d.getFullYear() === selectedDate.getFullYear() &&
+          d.getMonth() === selectedDate.getMonth() &&
+          d.getDate() === selectedDate.getDate()
+        );
+      })
+    : [];
 
   if (isMobile) {
     return (
@@ -105,8 +240,29 @@ export default function ScheduleCalendarScreen({
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <AdminCalendar events={events} onDatesSet={handleDatesSet} />
+      <div
+        className={
+          selectedDate
+            ? "grid gap-6 items-start"
+            : ""
+        }
+        style={selectedDate ? { gridTemplateColumns: "1fr 300px" } : undefined}
+      >
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <AdminCalendar
+            events={events}
+            onDatesSet={handleDatesSet}
+            onDaySelect={setSelectedDate}
+            selectedDate={selectedDate}
+          />
+        </div>
+        {selectedDate && (
+          <DaySchedulePanel
+            date={selectedDate}
+            events={selectedDateEvents}
+            onClose={() => setSelectedDate(null)}
+          />
+        )}
       </div>
     </div>
   );
