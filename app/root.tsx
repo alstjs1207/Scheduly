@@ -49,6 +49,8 @@ import NotFound from "./core/screens/404";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico" },
+  { rel: "manifest", href: "/manifest.webmanifest" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
@@ -171,6 +173,22 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="application-name" content="Lestly Admin" />
+        <meta name="apple-mobile-web-app-title" content="Lestly" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta
+          name="theme-color"
+          content="#ffffff"
+          media="(prefers-color-scheme: light)"
+        />
+        <meta
+          name="theme-color"
+          content="#111111"
+          media="(prefers-color-scheme: dark)"
+        />
+        <meta name="format-detection" content="telephone=no" />
         <Meta />
         <Links />
         {isPreRendered ? (
@@ -306,7 +324,10 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     details = error.statusText || details;
   } else if (error && error instanceof Error) {
     // Handle JavaScript errors
-    if (import.meta.env.VITE_SENTRY_DSN && import.meta.env.VITE_MODE === "debug") {
+    if (
+      import.meta.env.VITE_SENTRY_DSN &&
+      import.meta.env.VITE_MODE === "debug"
+    ) {
       // Report error to Sentry (only when MODE=debug)
       Sentry.captureException(error);
     }
