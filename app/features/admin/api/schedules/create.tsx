@@ -5,18 +5,18 @@ import { data, redirect } from "react-router";
 import { requireMethod } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 import {
-  checkConcurrentLimit,
   createSchedule,
   createSchedules,
+  validateScheduleBatch,
 } from "~/features/schedules/queries";
-import { fromKST } from "~/features/schedules/utils/kst";
+import { fromKST, toKSTDateString } from "~/features/schedules/utils/kst";
+import { generateWeeklyDates } from "~/features/schedules/utils/rrule-helper";
 import {
+  DURATION_OPTIONS,
   applyTimeToDate,
   calculateEndTime,
-  DURATION_OPTIONS,
   parseDateString,
 } from "~/features/schedules/utils/student-schedule-rules";
-import { generateWeeklyDates } from "~/features/schedules/utils/rrule-helper";
 
 import { requireAdminRole } from "../../guards.server";
 import { getStudentById } from "../../queries";
@@ -29,7 +29,9 @@ export async function action({ request }: Route.ActionArgs) {
 
   const formData = await request.formData();
 
-  const studentIds = formData.getAll("student_ids") as string[];
+  const studentIds = Array.from(
+    new Set(formData.getAll("student_ids") as string[]),
+  );
   // Fallback for edit mode (single student_id)
   if (studentIds.length === 0) {
     const singleId = formData.get("student_id") as string;
@@ -51,34 +53,30 @@ export async function action({ request }: Route.ActionArgs) {
   const isRecurring = formData.get("is_recurring") === "true";
 
   // Get duration hours from form selection (1타임=3시간)
-  const selectedDuration = DURATION_OPTIONS.find((opt) => opt.value === durationValue);
+  const selectedDuration = DURATION_OPTIONS.find(
+    (opt) => opt.value === durationValue,
+  );
   const durationHours = selectedDuration?.hours || 3; // fallback to 3 hours
 
   // Parse date and time (use parseDateString to avoid UTC timezone issue)
   const date = parseDateString(dateStr);
   const startTime = applyTimeToDate(date, startTimeStr);
-  const endTime = calculateEndTime(startTime, durationHours);
 
   const errors: string[] = [];
 
   for (const studentId of studentIds) {
     try {
-      // Check concurrent limit for each student
-      const { allowed, currentCount, maxCount } = await checkConcurrentLimit(client, {
+      // This also verifies that the selected student belongs to the admin's org.
+      const student = await getStudentById(client, {
         organizationId,
-        startTime,
-        endTime,
+        studentId,
       });
 
-      if (!allowed) {
-        const student = await getStudentById(client, { organizationId, studentId });
-        errors.push(`${student.name}: 동시간대 최대 인원(${maxCount}명) 초과 (현재 ${currentCount}명)`);
-        continue;
-      }
+      let occurrenceStarts = [startTime];
+      let recurrenceEndDate: Date | null = null;
 
       if (isRecurring) {
         // Get student's class end date for recurring schedules
-        const student = await getStudentById(client, { organizationId, studentId });
         if (!student.class_end_date) {
           errors.push(`${student.name}: 수업 종료일이 설정되어 있지 않습니다.`);
           continue;
@@ -86,32 +84,69 @@ export async function action({ request }: Route.ActionArgs) {
 
         const [ey, em, ed] = student.class_end_date.split("-").map(Number);
         const endDate = fromKST(ey, em - 1, ed, 23, 59, 59);
-        const weeklyDates = generateWeeklyDates(startTime, endDate);
+        occurrenceStarts = generateWeeklyDates(startTime, endDate);
+        recurrenceEndDate = endDate;
 
+        if (occurrenceStarts.length === 0) {
+          errors.push(
+            `${student.name}: 수업 종료일 이후에는 반복 일정을 등록할 수 없습니다.`,
+          );
+          continue;
+        }
+      }
+
+      const candidates = occurrenceStarts.map((occurrenceStart) => ({
+        studentId,
+        startTime: occurrenceStart,
+        endTime: calculateEndTime(occurrenceStart, durationHours),
+      }));
+
+      // Validate every occurrence before inserting any row for this student.
+      const validation = await validateScheduleBatch(client, {
+        organizationId,
+        candidates,
+      });
+
+      if (!validation.allowed) {
+        const conflictDate = validation.candidate
+          ? toKSTDateString(validation.candidate.startTime)
+          : dateStr;
+
+        if (validation.reason === "student_conflict") {
+          errors.push(
+            `${student.name}: ${conflictDate}에 이미 겹치는 일정이 있습니다.`,
+          );
+        } else if (validation.reason === "capacity") {
+          errors.push(
+            `${student.name}: ${conflictDate} 동시간대 최대 인원(${validation.maxCount}명) 초과 (현재 ${validation.currentCount}명)`,
+          );
+        } else {
+          errors.push(`${student.name}: 올바르지 않은 일정 시간입니다.`);
+        }
+        continue;
+      }
+
+      if (isRecurring && recurrenceEndDate) {
         // Create main schedule
         const mainSchedule = await createSchedule(client, {
           organization_id: organizationId,
           student_id: studentId,
           program_id: programId,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          rrule: `FREQ=WEEKLY;UNTIL=${endDate.toISOString()}`,
+          start_time: candidates[0].startTime.toISOString(),
+          end_time: candidates[0].endTime.toISOString(),
+          rrule: `FREQ=WEEKLY;UNTIL=${recurrenceEndDate.toISOString()}`,
         });
 
         // Create recurring instances
-        if (weeklyDates.length > 1) {
-          const recurringSchedules = weeklyDates.slice(1).map((recurDate) => {
-            const recurStartTime = applyTimeToDate(recurDate, startTimeStr);
-            const recurEndTime = calculateEndTime(recurStartTime, durationHours);
-            return {
-              organization_id: organizationId,
-              student_id: studentId,
-              program_id: programId,
-              start_time: recurStartTime.toISOString(),
-              end_time: recurEndTime.toISOString(),
-              parent_schedule_id: mainSchedule.schedule_id,
-            };
-          });
+        if (candidates.length > 1) {
+          const recurringSchedules = candidates.slice(1).map((candidate) => ({
+            organization_id: organizationId,
+            student_id: studentId,
+            program_id: programId,
+            start_time: candidate.startTime.toISOString(),
+            end_time: candidate.endTime.toISOString(),
+            parent_schedule_id: mainSchedule.schedule_id,
+          }));
 
           await createSchedules(client, recurringSchedules);
         }
@@ -121,12 +156,15 @@ export async function action({ request }: Route.ActionArgs) {
           organization_id: organizationId,
           student_id: studentId,
           program_id: programId,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
+          start_time: candidates[0].startTime.toISOString(),
+          end_time: candidates[0].endTime.toISOString(),
         });
       }
     } catch (e) {
-      const student = await getStudentById(client, { organizationId, studentId }).catch(() => null);
+      const student = await getStudentById(client, {
+        organizationId,
+        studentId,
+      }).catch(() => null);
       const name = student?.name || studentId;
       errors.push(`${name}: 등록 중 오류가 발생했습니다.`);
     }
@@ -134,10 +172,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   if (errors.length > 0 && errors.length === studentIds.length) {
     // All failed
-    return data(
-      { success: false, error: errors.join("\n") },
-      { status: 400 },
-    );
+    return data({ success: false, error: errors.join("\n") }, { status: 400 });
   }
 
   if (errors.length > 0) {

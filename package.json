@@ -15,6 +15,7 @@
     "db:typegen": "supabase gen types typescript --project-id smbpzlzbvplhtpqggrjf > database.types.ts",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
+    "test:unit": "node --test --experimental-strip-types tests/*.test.ts",
     "format": "prettier --write \"app/**/*.{ts,tsx,js,jsx,json,css,md,mdx}\""
   },
   "dependencies": {

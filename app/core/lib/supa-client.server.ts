@@ -72,8 +72,9 @@ export function getAuthUser(client: SupabaseClient): Promise<User | null> {
 export async function getSessionUser(
   client: SupabaseClient,
 ): Promise<User | null> {
-  const {
-    data: { session },
-  } = await client.auth.getSession();
-  return session?.user ?? null;
+  // Keep the legacy helper name for existing callers, but never trust the user
+  // object read directly from cookie-backed session storage on the server.
+  // getAuthUser() validates the access token with Supabase Auth and is cached per
+  // request/client, so callers also avoid duplicate validation requests.
+  return getAuthUser(client);
 }

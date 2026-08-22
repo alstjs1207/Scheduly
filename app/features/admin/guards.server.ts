@@ -8,12 +8,12 @@
  * between profiles and organizations.
  */
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { Database } from "database.types";
 
 import { data, redirect } from "react-router";
 
-import type { Database } from "database.types";
 import adminClient from "~/core/lib/supa-admin-client.server";
-import { getSessionUser } from "~/core/lib/supa-client.server";
+import { getAuthUser } from "~/core/lib/supa-client.server";
 import { getNotificationsEnabled } from "~/features/app-settings/queries";
 
 export interface AdminUser {
@@ -49,7 +49,7 @@ export async function requireAdminRole(
   client: SupabaseClient<Database>,
   organizationId?: string,
 ): Promise<AdminUser> {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     throw redirect("/login");
@@ -117,7 +117,7 @@ export async function requireAdminRole(
 export async function isAdmin(
   client: SupabaseClient<Database>,
 ): Promise<boolean> {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     return false;
@@ -157,7 +157,7 @@ export async function isAdminWithOrganization(
  * @returns The user's profile or null
  */
 export async function getCurrentUserProfile(client: SupabaseClient<Database>) {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     return null;
@@ -185,7 +185,7 @@ export async function getCurrentUserProfile(client: SupabaseClient<Database>) {
 export async function getCurrentOrganizationId(
   client: SupabaseClient<Database>,
 ): Promise<string | null> {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     return null;
@@ -214,7 +214,7 @@ export async function getCurrentOrganizationId(
 export async function getAdminOrganizations(
   client: SupabaseClient<Database>,
 ): Promise<AdminMembership[]> {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     return [];
@@ -245,7 +245,7 @@ export async function isAdminOfOrganization(
   client: SupabaseClient<Database>,
   organizationId: string,
 ): Promise<boolean> {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     return false;
@@ -279,7 +279,7 @@ export async function isAdminOfOrganization(
 export async function isSuperAdmin(
   client: SupabaseClient<Database>,
 ): Promise<boolean> {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     return false;
@@ -305,7 +305,7 @@ export async function isSuperAdmin(
 export async function requireSuperAdmin(
   client: SupabaseClient<Database>,
 ): Promise<SuperAdminUser> {
-  const user = await getSessionUser(client);
+  const user = await getAuthUser(client);
 
   if (!user) {
     throw redirect("/login");
@@ -314,10 +314,7 @@ export async function requireSuperAdmin(
   // Check app_metadata for super_admin role
   const role = user.app_metadata?.role;
   if (role !== "super_admin") {
-    throw data(
-      { error: "Super admin access required" },
-      { status: 403 },
-    );
+    throw data({ error: "Super admin access required" }, { status: 403 });
   }
 
   return { user, isSuperAdmin: true };
@@ -370,9 +367,15 @@ export async function requireNotificationsEnabled(
  */
 export async function getGlobalStats() {
   const [orgsResult, membersResult, schedulesResult] = await Promise.all([
-    adminClient.from("organizations").select("organization_id", { count: "exact", head: true }),
-    adminClient.from("organization_members").select("profile_id", { count: "exact", head: true }),
-    adminClient.from("schedules").select("schedule_id", { count: "exact", head: true }),
+    adminClient
+      .from("organizations")
+      .select("organization_id", { count: "exact", head: true }),
+    adminClient
+      .from("organization_members")
+      .select("profile_id", { count: "exact", head: true }),
+    adminClient
+      .from("schedules")
+      .select("schedule_id", { count: "exact", head: true }),
   ]);
 
   return {

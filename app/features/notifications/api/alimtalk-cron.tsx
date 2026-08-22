@@ -14,7 +14,7 @@ import adminClient from "~/core/lib/supa-admin-client.server";
 
 const SUPABASE_FUNCTIONS_URL = process.env.SUPABASE_URL?.replace(
   ".supabase.co",
-  ".supabase.co/functions/v1"
+  ".supabase.co/functions/v1",
 );
 
 /**
@@ -57,7 +57,9 @@ export async function action({ request }: Route.ActionArgs) {
       .select("notification_id")
       .eq("type", "ALIMTALK")
       .eq("alimtalk_status", "PENDING")
-      .or(`scheduled_send_at.is.null,scheduled_send_at.lte.${now.toISOString()}`)
+      .or(
+        `scheduled_send_at.is.null,scheduled_send_at.lte.${now.toISOString()}`,
+      )
       .limit(50);
 
     for (const msg of pendingMessages || []) {
@@ -82,9 +84,11 @@ export async function action({ request }: Route.ActionArgs) {
         organization_templates(
           organization_id,
           status,
-          hours_before
+          hours_before,
+          alimtalk_enabled,
+          email_enabled
         )
-      `
+      `,
       )
       .eq("type", "SYS_REMIND_STUDENT")
       .eq("status", "ACTIVE");
@@ -100,7 +104,8 @@ export async function action({ request }: Route.ActionArgs) {
 
     for (const setting of reminderSettings || []) {
       // Process each organization's reminder settings
-      for (const orgTemplate of (setting.organization_templates || []) as OrgTemplateWithChannels[]) {
+      for (const orgTemplate of (setting.organization_templates ||
+        []) as OrgTemplateWithChannels[]) {
         if (orgTemplate.status !== "ACTIVE") continue;
 
         // Check channel settings (default to true for backwards compatibility)
@@ -119,7 +124,7 @@ export async function action({ request }: Route.ActionArgs) {
         // Target time range: NOW + hours_before ~ NOW + hours_before + 5min
         const targetStartMin = new Date(now.getTime() + hoursBeforeMs);
         const targetStartMax = new Date(
-          now.getTime() + hoursBeforeMs + 5 * 60 * 1000
+          now.getTime() + hoursBeforeMs + 5 * 60 * 1000,
         );
 
         // Find schedules in the reminder window
@@ -134,7 +139,7 @@ export async function action({ request }: Route.ActionArgs) {
             start_time,
             programs(title),
             organizations(name)
-          `
+          `,
           )
           .eq("organization_id", orgTemplate.organization_id)
           .gte("start_time", targetStartMin.toISOString())
@@ -154,7 +159,9 @@ export async function action({ request }: Route.ActionArgs) {
           // Get student email from auth.users
           let studentEmail: string | null = null;
           if (emailEnabled) {
-            const { data: user } = await adminClient.auth.admin.getUserById(schedule.student_id);
+            const { data: user } = await adminClient.auth.admin.getUserById(
+              schedule.student_id,
+            );
             studentEmail = user?.user?.email || null;
           }
 
@@ -211,8 +218,17 @@ export async function action({ request }: Route.ActionArgs) {
             email_status: emailStatus,
           };
 
-          const { data: newNotification } = await (adminClient
-            .from("notifications") as unknown as { insert: (data: typeof insertData) => { select: () => { single: () => Promise<{ data: { notification_id: number } | null }> } } })
+          const { data: newNotification } = await (
+            adminClient.from("notifications") as unknown as {
+              insert: (data: typeof insertData) => {
+                select: () => {
+                  single: () => Promise<{
+                    data: { notification_id: number } | null;
+                  }>;
+                };
+              };
+            }
+          )
             .insert(insertData)
             .select()
             .single();
@@ -228,15 +244,15 @@ export async function action({ request }: Route.ActionArgs) {
       }
 
       // Also check organizations without custom settings (use default)
-      const orgsWithSettings = ((setting.organization_templates || []) as OrgTemplateWithChannels[]).map(
-        (ot) => ot.organization_id
-      );
+      const orgsWithSettings = (
+        (setting.organization_templates || []) as OrgTemplateWithChannels[]
+      ).map((ot) => ot.organization_id);
 
       const hoursBeforeMs =
         (setting.default_hours_before || 24) * 60 * 60 * 1000;
       const targetStartMin = new Date(now.getTime() + hoursBeforeMs);
       const targetStartMax = new Date(
-        now.getTime() + hoursBeforeMs + 5 * 60 * 1000
+        now.getTime() + hoursBeforeMs + 5 * 60 * 1000,
       );
 
       // Find schedules for organizations without custom settings
@@ -251,7 +267,7 @@ export async function action({ request }: Route.ActionArgs) {
           start_time,
           programs(title),
           organizations(name)
-        `
+        `,
         )
         .gte("start_time", targetStartMin.toISOString())
         .lt("start_time", targetStartMax.toISOString());
@@ -261,7 +277,7 @@ export async function action({ request }: Route.ActionArgs) {
         query = query.not(
           "organization_id",
           "in",
-          `(${orgsWithSettings.join(",")})`
+          `(${orgsWithSettings.join(",")})`,
         );
       }
 
@@ -278,7 +294,9 @@ export async function action({ request }: Route.ActionArgs) {
 
         // Get student email from auth.users (default: email enabled)
         let studentEmail: string | null = null;
-        const { data: user } = await adminClient.auth.admin.getUserById(schedule.student_id);
+        const { data: user } = await adminClient.auth.admin.getUserById(
+          schedule.student_id,
+        );
         studentEmail = user?.user?.email || null;
 
         const { data: existing } = await adminClient
@@ -297,7 +315,9 @@ export async function action({ request }: Route.ActionArgs) {
           (schedule.programs as { title: string })?.title || "미지정";
 
         // Determine email status (default: email enabled)
-        const emailStatus: "PENDING" | "SKIPPED" = studentEmail ? "PENDING" : "SKIPPED";
+        const emailStatus: "PENDING" | "SKIPPED" = studentEmail
+          ? "PENDING"
+          : "SKIPPED";
 
         // Note: recipient_email and email_status are new columns from 0014_email_notifications.sql
         const insertData = {
@@ -322,8 +342,17 @@ export async function action({ request }: Route.ActionArgs) {
           email_status: emailStatus,
         };
 
-        const { data: newNotification } = await (adminClient
-          .from("notifications") as unknown as { insert: (data: typeof insertData) => { select: () => { single: () => Promise<{ data: { notification_id: number } | null }> } } })
+        const { data: newNotification } = await (
+          adminClient.from("notifications") as unknown as {
+            insert: (data: typeof insertData) => {
+              select: () => {
+                single: () => Promise<{
+                  data: { notification_id: number } | null;
+                }>;
+              };
+            };
+          }
+        )
           .insert(insertData)
           .select()
           .single();
@@ -336,7 +365,7 @@ export async function action({ request }: Route.ActionArgs) {
     }
   } catch (error) {
     Sentry.captureException(
-      error instanceof Error ? error : new Error(String(error))
+      error instanceof Error ? error : new Error(String(error)),
     );
   }
 
@@ -358,7 +387,7 @@ async function invokeSendAlimtalk(notificationId: number): Promise<void> {
     });
   } catch (error) {
     Sentry.captureException(
-      error instanceof Error ? error : new Error(String(error))
+      error instanceof Error ? error : new Error(String(error)),
     );
   }
 }
