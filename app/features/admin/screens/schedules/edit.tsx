@@ -1,7 +1,7 @@
 import type { Route } from "./+types/edit";
 
-import { Link, useFetcher } from "react-router";
 import { ChevronLeftIcon, TrashIcon } from "lucide-react";
+import { Link, useFetcher } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 import {
@@ -67,7 +67,8 @@ export default function ScheduleEditScreen({
   const dateStr = `${year}-${month}-${day}`;
 
   // Calculate duration from start and end time
-  const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+  const durationHours =
+    (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
   const durationSlots = String(Math.round(durationHours / 3)); // 3시간 = 1타임
 
   return (
@@ -75,12 +76,12 @@ export default function ScheduleEditScreen({
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link to="/admin/schedules">
+            <Link to="/admin/schedules" aria-label="일정 관리로 돌아가기">
               <ChevronLeftIcon className="h-4 w-4" />
             </Link>
           </Button>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold">일정 수정</h1>
+            <h1 className="text-xl font-bold md:text-2xl">일정 수정</h1>
             <p className="text-muted-foreground">
               {schedule.student?.name || "알 수 없음"}의 일정을 수정합니다.
             </p>
@@ -89,9 +90,12 @@ export default function ScheduleEditScreen({
         {!isPast && (
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="destructive">
-                <TrashIcon className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">삭제</span>
+              <Button
+                variant="outline"
+                className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive min-h-11 self-start md:self-auto"
+              >
+                <TrashIcon className="mr-2 h-4 w-4" />
+                일정 삭제
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -106,7 +110,7 @@ export default function ScheduleEditScreen({
                   method="post"
                   action={`/api/admin/schedules/${schedule.schedule_id}/delete`}
                 >
-                  <div className="flex gap-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                     <div className="flex items-center space-x-2">
                       <input
                         type="radio"
@@ -156,7 +160,7 @@ export default function ScheduleEditScreen({
         </CardHeader>
         <CardContent>
           {isPast ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-muted-foreground py-8 text-center">
               과거 날짜의 일정은 수정할 수 없습니다.
             </div>
           ) : (

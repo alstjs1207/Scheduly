@@ -1,7 +1,7 @@
 import type { Route } from "./+types/list";
 
+import { FileTextIcon, MailIcon, SmartphoneIcon } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { FileTextIcon, SmartphoneIcon, MailIcon } from "lucide-react";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
@@ -27,7 +27,10 @@ import {
   TooltipTrigger,
 } from "~/core/components/ui/tooltip";
 import makeServerClient from "~/core/lib/supa-client.server";
-import { requireAdminRole, requireNotificationsEnabled } from "~/features/admin/guards.server";
+import {
+  requireAdminRole,
+  requireNotificationsEnabled,
+} from "~/features/admin/guards.server";
 
 import { getNotificationsPaginated } from "../queries";
 
@@ -61,30 +64,54 @@ export async function loader({ request }: Route.LoaderArgs) {
   return result;
 }
 
-const typeLabels: Record<string, { label: string; variant: "default" | "secondary" }> = {
+const typeLabels: Record<
+  string,
+  { label: string; variant: "default" | "secondary" }
+> = {
   ALIMTALK: { label: "알림톡", variant: "default" },
   CONSULT_REQUEST: { label: "상담 신청", variant: "secondary" },
 };
 
-const alimtalkStatusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const alimtalkStatusLabels: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
   PENDING: { label: "대기", variant: "outline" },
   SENT: { label: "완료", variant: "default" },
   FAILED: { label: "실패", variant: "destructive" },
 };
 
-const emailStatusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const emailStatusLabels: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
   PENDING: { label: "대기", variant: "outline" },
   SENT: { label: "완료", variant: "default" },
   FAILED: { label: "실패", variant: "destructive" },
   SKIPPED: { label: "건너뜀", variant: "secondary" },
 };
 
-const consultStatusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const consultStatusLabels: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
   WAITING: { label: "상담 대기", variant: "outline" },
   COMPLETED: { label: "상담 완료", variant: "default" },
 };
 
-const consultResultLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
+const consultResultLabels: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" }
+> = {
   SUCCESS: { label: "등록 성공", variant: "default" },
   FAILED: { label: "등록 실패", variant: "destructive" },
 };
@@ -120,7 +147,7 @@ export default function NotificationListScreen({
   };
 
   // 발송 채널 아이콘 렌더링
-  const getChannelIcons = (notification: typeof notifications[0]) => {
+  const getChannelIcons = (notification: (typeof notifications)[0]) => {
     if (notification.type === "CONSULT_REQUEST") {
       return null;
     }
@@ -145,7 +172,9 @@ export default function NotificationListScreen({
                 />
               </TooltipTrigger>
               <TooltipContent>
-                알림톡: {alimtalkStatusLabels[notification.alimtalk_status || ""]?.label || "-"}
+                알림톡:{" "}
+                {alimtalkStatusLabels[notification.alimtalk_status || ""]
+                  ?.label || "-"}
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -167,7 +196,9 @@ export default function NotificationListScreen({
                 />
               </TooltipTrigger>
               <TooltipContent>
-                이메일: {emailStatusLabels[notification.email_status || ""]?.label || "-"}
+                이메일:{" "}
+                {emailStatusLabels[notification.email_status || ""]?.label ||
+                  "-"}
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -179,10 +210,17 @@ export default function NotificationListScreen({
   };
 
   // 상태 뱃지 렌더링 (알림톡 + 이메일)
-  const getStatusBadge = (notification: typeof notifications[0]) => {
-    if (notification.type === "CONSULT_REQUEST" && notification.consult_status) {
+  const getStatusBadge = (notification: (typeof notifications)[0]) => {
+    if (
+      notification.type === "CONSULT_REQUEST" &&
+      notification.consult_status
+    ) {
       const status = consultStatusLabels[notification.consult_status];
-      return <Badge variant={status?.variant || "default"}>{status?.label || notification.consult_status}</Badge>;
+      return (
+        <Badge variant={status?.variant || "default"}>
+          {status?.label || notification.consult_status}
+        </Badge>
+      );
     }
 
     if (notification.type === "ALIMTALK") {
@@ -283,7 +321,57 @@ export default function NotificationListScreen({
         )}
       </div>
 
-      <div className="rounded-md border">
+      <div className="space-y-3 md:hidden">
+        {notifications.length === 0 ? (
+          <div className="text-muted-foreground rounded-lg border py-10 text-center text-sm">
+            알림 이력이 없습니다.
+          </div>
+        ) : (
+          notifications.map((notification) => (
+            <Link
+              key={notification.notification_id}
+              to={`/admin/notifications/${notification.notification_id}`}
+              className="active:bg-accent block rounded-lg border p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <Badge
+                  variant={typeLabels[notification.type]?.variant || "default"}
+                >
+                  {typeLabels[notification.type]?.label || notification.type}
+                </Badge>
+                {getStatusBadge(notification)}
+              </div>
+              <div className="mt-3">
+                <p className="font-semibold">
+                  {notification.recipient_name || "수신자 미지정"}
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  {notification.recipient_phone ||
+                    notification.recipient_email ||
+                    "연락처 없음"}
+                </p>
+              </div>
+              <p className="mt-3 line-clamp-2 text-sm">
+                {notification.type === "ALIMTALK"
+                  ? notification.template_name ||
+                    notification.alimtalk_template_code ||
+                    "알림톡"
+                  : notification.consult_message || "상담 내용 없음"}
+              </p>
+              <p className="text-muted-foreground mt-3 text-xs">
+                {new Date(notification.created_at).toLocaleString("ko-KR", {
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </Link>
+          ))
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-md border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -300,7 +388,7 @@ export default function NotificationListScreen({
           <TableBody>
             {notifications.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={8} className="py-8 text-center">
                   알림 이력이 없습니다.
                 </TableCell>
               </TableRow>
@@ -308,38 +396,57 @@ export default function NotificationListScreen({
               notifications.map((notification) => (
                 <TableRow
                   key={notification.notification_id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/admin/notifications/${notification.notification_id}`)}
+                  className="hover:bg-muted/50 cursor-pointer"
+                  onClick={() =>
+                    navigate(
+                      `/admin/notifications/${notification.notification_id}`,
+                    )
+                  }
                 >
+                  <TableCell>{getChannelIcons(notification)}</TableCell>
                   <TableCell>
-                    {getChannelIcons(notification)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={typeLabels[notification.type]?.variant || "default"}>
-                      {typeLabels[notification.type]?.label || notification.type}
+                    <Badge
+                      variant={
+                        typeLabels[notification.type]?.variant || "default"
+                      }
+                    >
+                      {typeLabels[notification.type]?.label ||
+                        notification.type}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {getStatusBadge(notification)}
-                  </TableCell>
+                  <TableCell>{getStatusBadge(notification)}</TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{notification.recipient_name || "-"}</div>
-                      <div className="text-sm text-muted-foreground">{notification.recipient_phone}</div>
+                      <div className="font-medium">
+                        {notification.recipient_name || "-"}
+                      </div>
+                      <div className="text-muted-foreground text-sm">
+                        {notification.recipient_phone}
+                      </div>
                       {notification.recipient_email && (
-                        <div className="text-xs text-muted-foreground">{notification.recipient_email}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {notification.recipient_email}
+                        </div>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {notification.type === "ALIMTALK"
-                      ? notification.template_name || notification.alimtalk_template_code
+                      ? notification.template_name ||
+                        notification.alimtalk_template_code
                       : notification.consult_message || "-"}
                   </TableCell>
                   <TableCell>
-                    {notification.type === "CONSULT_REQUEST" && notification.consult_result ? (
-                      <Badge variant={consultResultLabels[notification.consult_result]?.variant || "default"}>
-                        {consultResultLabels[notification.consult_result]?.label || notification.consult_result}
+                    {notification.type === "CONSULT_REQUEST" &&
+                    notification.consult_result ? (
+                      <Badge
+                        variant={
+                          consultResultLabels[notification.consult_result]
+                            ?.variant || "default"
+                        }
+                      >
+                        {consultResultLabels[notification.consult_result]
+                          ?.label || notification.consult_result}
                       </Badge>
                     ) : (
                       "-"
@@ -361,7 +468,9 @@ export default function NotificationListScreen({
                       asChild
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Link to={`/admin/notifications/${notification.notification_id}`}>
+                      <Link
+                        to={`/admin/notifications/${notification.notification_id}`}
+                      >
                         상세
                       </Link>
                     </Button>
@@ -387,7 +496,7 @@ export default function NotificationListScreen({
           >
             이전
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {currentPage} / {totalPages}
           </span>
           <Button

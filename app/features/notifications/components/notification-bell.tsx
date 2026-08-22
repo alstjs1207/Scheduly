@@ -20,8 +20,8 @@ import {
 import { cn } from "~/core/lib/utils";
 
 import {
-  useInAppNotifications,
   type InAppNotification,
+  useInAppNotifications,
 } from "../hooks/use-in-app-notifications";
 
 interface NotificationBellProps {
@@ -35,7 +35,12 @@ export function NotificationBell({ organizationId }: NotificationBellProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative size-11 md:size-9"
+          aria-label={unreadCount > 0 ? `알림 ${unreadCount}건` : "알림"}
+        >
           <BellIcon className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
@@ -67,7 +72,7 @@ export function NotificationBell({ organizationId }: NotificationBellProps) {
         </div>
         <DropdownMenuSeparator />
         {notifications.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground py-6 text-center text-sm">
             알림이 없습니다
           </div>
         ) : (
@@ -85,7 +90,7 @@ export function NotificationBell({ organizationId }: NotificationBellProps) {
         <DropdownMenuItem asChild>
           <Link
             to="/notifications"
-            className="justify-center text-sm text-muted-foreground"
+            className="text-muted-foreground justify-center text-sm"
           >
             전체 보기
           </Link>
@@ -103,7 +108,7 @@ interface NotificationItemProps {
 function NotificationItem({ notification, onRead }: NotificationItemProps) {
   return (
     <DropdownMenuItem
-      className="flex flex-col items-start gap-1 cursor-pointer"
+      className="flex cursor-pointer flex-col items-start gap-1"
       onClick={() => {
         if (!notification.is_read) {
           onRead();
@@ -114,12 +119,12 @@ function NotificationItem({ notification, onRead }: NotificationItemProps) {
         <span
           className={cn(
             "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-            notification.is_read ? "bg-transparent" : "bg-blue-500"
+            notification.is_read ? "bg-transparent" : "bg-blue-500",
           )}
         />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{notification.message}</p>
-          <p className="text-xs text-muted-foreground">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{notification.message}</p>
+          <p className="text-muted-foreground text-xs">
             {formatRelativeTime(notification.created_at)}
           </p>
         </div>

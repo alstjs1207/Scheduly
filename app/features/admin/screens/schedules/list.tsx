@@ -1,7 +1,13 @@
 import type { Route } from "./+types/list";
 
+import {
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+} from "lucide-react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { CalendarIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
@@ -26,9 +32,15 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const now = nowKST();
   const year = parseInt(url.searchParams.get("year") || String(now.year));
-  const month = parseInt(url.searchParams.get("month") || String(now.month + 1));
+  const month = parseInt(
+    url.searchParams.get("month") || String(now.month + 1),
+  );
 
-  const schedules = await getMonthlySchedules(client, { organizationId, year, month });
+  const schedules = await getMonthlySchedules(client, {
+    organizationId,
+    year,
+    month,
+  });
 
   // Group schedules by KST date
   const schedulesByDate = schedules.reduce(
@@ -63,9 +75,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 
-export default function ScheduleListScreen({ loaderData }: Route.ComponentProps) {
+export default function ScheduleListScreen({
+  loaderData,
+}: Route.ComponentProps) {
   const { allDays, year, month } = loaderData;
   const [, setSearchParams] = useSearchParams();
+  const [showEmptyDays, setShowEmptyDays] = useState(false);
+  const displayedDays = showEmptyDays
+    ? allDays
+    : allDays.filter((day) => day.schedules.length > 0 || day.isToday);
 
   const handlePrevMonth = () => {
     const prevMonth = month === 1 ? 12 : month - 1;
@@ -83,8 +101,8 @@ export default function ScheduleListScreen({ loaderData }: Route.ComponentProps)
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">일정 관리</h1>
-          <p className="hidden md:block text-muted-foreground">
+          <h1 className="text-xl font-bold md:text-2xl">일정 관리</h1>
+          <p className="text-muted-foreground hidden md:block">
             수강생들의 수업 일정을 관리합니다.
           </p>
         </div>
@@ -92,105 +110,156 @@ export default function ScheduleListScreen({ loaderData }: Route.ComponentProps)
           <Button variant="outline" asChild>
             <Link to={`/admin/schedules?year=${year}&month=${month}`}>
               <CalendarIcon className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">캘린더 보기</span>
+              <span>캘린더</span>
             </Link>
           </Button>
           <Button asChild>
             <Link to="/admin/schedules/new">
               <PlusIcon className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">일정 등록</span>
+              <span>일정 등록</span>
             </Link>
           </Button>
         </div>
       </div>
 
       <div className="flex items-center justify-center gap-4">
-        <Button variant="outline" size="icon" onClick={handlePrevMonth}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11"
+          aria-label="이전 달"
+          onClick={handlePrevMonth}
+        >
           <ChevronLeftIcon className="h-4 w-4" />
         </Button>
         <h2 className="text-xl font-semibold">
           {year}년 {month}월
         </h2>
-        <Button variant="outline" size="icon" onClick={handleNextMonth}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11"
+          aria-label="다음 달"
+          onClick={handleNextMonth}
+        >
           <ChevronRightIcon className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="rounded-md border overflow-x-auto">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-muted-foreground text-sm">
+          {showEmptyDays ? "이번 달 전체 날짜" : "일정이 있는 날짜 중심"}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11"
+          aria-pressed={showEmptyDays}
+          onClick={() => setShowEmptyDays((current) => !current)}
+        >
+          {showEmptyDays ? "빈 날짜 숨기기" : "빈 날짜 포함"}
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-20 md:w-32">날짜</TableHead>
-              <TableHead className="hidden md:table-cell w-16">요일</TableHead>
+              <TableHead className="hidden w-16 md:table-cell">요일</TableHead>
               <TableHead>일정</TableHead>
               <TableHead className="w-16 md:w-20"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {allDays.map(({ date, day, schedules, isToday, isPast }) => {
-              const dayOfWeek = new Date(date).getDay();
-              return (
-                <TableRow
-                  key={date}
-                  className={`${isToday ? "bg-accent" : ""} ${isPast ? "opacity-60" : ""}`}
-                >
-                  <TableCell className="font-medium">
-                    {month}월 {day}일
-                  </TableCell>
-                  <TableCell
-                    className={`hidden md:table-cell ${dayOfWeek === 0 ? "text-red-500" : ""} ${dayOfWeek === 6 ? "text-blue-500" : ""}`}
+            {displayedDays.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="py-10 text-center">
+                  <p className="text-muted-foreground text-sm">
+                    이 달에는 등록된 일정이 없습니다.
+                  </p>
+                  <Button className="mt-4 min-h-11" asChild>
+                    <Link to="/admin/schedules/new">일정 등록</Link>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ) : (
+              displayedDays.map(({ date, day, schedules, isToday, isPast }) => {
+                const dayOfWeek = new Date(date).getDay();
+                return (
+                  <TableRow
+                    key={date}
+                    className={`${isToday ? "bg-accent" : ""} ${isPast ? "opacity-60" : ""}`}
                   >
-                    {dayLabels[dayOfWeek]}
-                  </TableCell>
-                  <TableCell>
-                    {schedules.length === 0 ? (
-                      <span className="text-muted-foreground">-</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {schedules.map((schedule) => (
-                          <Badge
-                            key={schedule.schedule_id}
-                            variant="outline"
-                            className="cursor-pointer hover:bg-accent"
-                            style={{
-                              borderColor: schedule.student?.color || "#3B82F6",
-                              backgroundColor: `${schedule.student?.color || "#3B82F6"}20`,
-                            }}
-                            asChild
-                          >
-                            <Link to={`/admin/schedules/${schedule.schedule_id}/edit`}>
-                              {schedule.student?.name || "알 수 없음"}
-                              {schedule.program?.title && (
-                                <span className="hidden md:inline text-muted-foreground ml-1">
-                                  ({schedule.program.title})
-                                </span>
-                              )}
-                              {" "}
-                              {new Date(schedule.start_time).toLocaleTimeString(
-                                "ko-KR",
-                                { hour: "2-digit", minute: "2-digit" },
-                              )}
-                              -
-                              {new Date(schedule.end_time).toLocaleTimeString(
-                                "ko-KR",
-                                { hour: "2-digit", minute: "2-digit" },
-                              )}
-                            </Link>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {!isPast && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/admin/schedules/new?date=${date}`}>추가</Link>
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                    <TableCell className="font-medium">
+                      {month}월 {day}일
+                    </TableCell>
+                    <TableCell
+                      className={`hidden md:table-cell ${dayOfWeek === 0 ? "text-red-500" : ""} ${dayOfWeek === 6 ? "text-blue-500" : ""}`}
+                    >
+                      {dayLabels[dayOfWeek]}
+                    </TableCell>
+                    <TableCell>
+                      {schedules.length === 0 ? (
+                        <span className="text-muted-foreground">-</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {schedules.map((schedule) => (
+                            <Badge
+                              key={schedule.schedule_id}
+                              variant="outline"
+                              className="hover:bg-accent cursor-pointer"
+                              style={{
+                                borderColor:
+                                  schedule.student?.color || "#3B82F6",
+                                backgroundColor: `${schedule.student?.color || "#3B82F6"}20`,
+                              }}
+                              asChild
+                            >
+                              <Link
+                                to={`/admin/schedules/${schedule.schedule_id}/edit`}
+                              >
+                                {schedule.student?.name || "알 수 없음"}
+                                {schedule.program?.title && (
+                                  <span className="text-muted-foreground ml-1 hidden md:inline">
+                                    ({schedule.program.title})
+                                  </span>
+                                )}{" "}
+                                {new Date(
+                                  schedule.start_time,
+                                ).toLocaleTimeString("ko-KR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                                -
+                                {new Date(schedule.end_time).toLocaleTimeString(
+                                  "ko-KR",
+                                  { hour: "2-digit", minute: "2-digit" },
+                                )}
+                              </Link>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {!isPast && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="min-h-11"
+                          asChild
+                        >
+                          <Link to={`/admin/schedules/new?date=${date}`}>
+                            추가
+                          </Link>
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </div>

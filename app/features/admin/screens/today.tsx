@@ -1,7 +1,9 @@
 import type { Route } from "./+types/today";
 
+import { CalendarCogIcon, PhoneIcon } from "lucide-react";
 import { Link } from "react-router";
 
+import { Button } from "~/core/components/ui/button";
 import {
   Card,
   CardContent,
@@ -27,18 +29,20 @@ export async function loader({ request }: Route.LoaderArgs) {
   const { organizationId } = await requireAdminRole(client);
 
   const today = new Date();
-  const schedules = await getDailySchedules(client, { organizationId, date: today });
+  const schedules = await getDailySchedules(client, {
+    organizationId,
+    date: today,
+  });
 
   return { schedules, today: today.toISOString() };
 }
-
 
 export default function TodayScreen({ loaderData }: Route.ComponentProps) {
   const { schedules, today } = loaderData;
   const todayDate = new Date(today);
 
   // Get unique students from schedules
-  const studentsMap = new Map<string, typeof schedules[0]["student"]>();
+  const studentsMap = new Map<string, (typeof schedules)[0]["student"]>();
   schedules.forEach((schedule) => {
     if (schedule.student && !studentsMap.has(schedule.student.profile_id)) {
       studentsMap.set(schedule.student.profile_id, schedule.student);
@@ -49,7 +53,7 @@ export default function TodayScreen({ loaderData }: Route.ComponentProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold">오늘의 수업</h1>
+        <h1 className="text-xl font-bold md:text-2xl">오늘의 수업</h1>
         <p className="text-muted-foreground">
           {todayDate.toLocaleDateString("ko-KR", {
             year: "numeric",
@@ -70,63 +74,65 @@ export default function TodayScreen({ loaderData }: Route.ComponentProps) {
           </CardHeader>
           <CardContent>
             {schedules.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center">
                 오늘 예정된 수업이 없습니다.
               </p>
             ) : (
               <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>시간</TableHead>
-                    <TableHead>수강생</TableHead>
-                    <TableHead>클래스</TableHead>
-                    <TableHead className="hidden md:table-cell">지역</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {schedules.map((schedule) => {
-                    const startTime = new Date(schedule.start_time);
-                    const endTime = new Date(schedule.end_time);
-                    return (
-                      <TableRow key={schedule.schedule_id}>
-                        <TableCell className="font-medium">
-                          {startTime.toLocaleTimeString("ko-KR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          {" - "}
-                          {endTime.toLocaleTimeString("ko-KR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            to={`/admin/students/${schedule.student?.profile_id}`}
-                            className="flex items-center gap-2 hover:underline"
-                          >
-                            <div
-                              className="h-3 w-3 rounded-full"
-                              style={{
-                                backgroundColor:
-                                  schedule.student?.color || "#3B82F6",
-                              }}
-                            />
-                            {schedule.student?.name || "알 수 없음"}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          {schedule.program?.title || "-"}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {schedule.student?.region || "-"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>시간</TableHead>
+                      <TableHead>수강생</TableHead>
+                      <TableHead>클래스</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        지역
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {schedules.map((schedule) => {
+                      const startTime = new Date(schedule.start_time);
+                      const endTime = new Date(schedule.end_time);
+                      return (
+                        <TableRow key={schedule.schedule_id}>
+                          <TableCell className="font-medium">
+                            {startTime.toLocaleTimeString("ko-KR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            {" - "}
+                            {endTime.toLocaleTimeString("ko-KR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Link
+                              to={`/admin/students/${schedule.student?.profile_id}`}
+                              className="flex items-center gap-2 hover:underline"
+                            >
+                              <div
+                                className="h-3 w-3 rounded-full"
+                                style={{
+                                  backgroundColor:
+                                    schedule.student?.color || "#3B82F6",
+                                }}
+                              />
+                              {schedule.student?.name || "알 수 없음"}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            {schedule.program?.title || "-"}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {schedule.student?.region || "-"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
@@ -135,48 +141,74 @@ export default function TodayScreen({ loaderData }: Route.ComponentProps) {
         <Card>
           <CardHeader>
             <CardTitle>오늘의 수강생</CardTitle>
-            <CardDescription>오늘 수업 예정인 수강생 {todayStudents.length}명</CardDescription>
+            <CardDescription>
+              오늘 수업 예정인 수강생 {todayStudents.length}명
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {todayStudents.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center">
                 오늘 수업 예정인 수강생이 없습니다.
               </p>
             ) : (
               <div className="space-y-4">
-                {todayStudents.map((student) => (
-                  <div
-                    key={student?.profile_id}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-8 w-8 rounded-full"
-                        style={{
-                          backgroundColor: student?.color || "#3B82F6",
-                        }}
-                      />
-                      <div>
-                        <Link
-                          to={`/admin/students/${student?.profile_id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {student?.name || "알 수 없음"}
-                        </Link>
-                        <p className="text-sm text-muted-foreground">
-                          {student?.region || "-"}
-                        </p>
+                {todayStudents.map((student) => {
+                  const studentSchedule = schedules.find(
+                    (schedule) =>
+                      schedule.student?.profile_id === student?.profile_id,
+                  );
+
+                  return (
+                    <div
+                      key={student?.profile_id}
+                      className="rounded-lg border p-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-8 w-8 rounded-full"
+                          style={{
+                            backgroundColor: student?.color || "#3B82F6",
+                          }}
+                        />
+                        <div>
+                          <Link
+                            to={`/admin/students/${student?.profile_id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {student?.name || "알 수 없음"}
+                          </Link>
+                          <p className="text-muted-foreground text-sm">
+                            {student?.region || "-"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        {student?.phone && (
+                          <Button
+                            variant="outline"
+                            className="min-h-11 flex-1"
+                            asChild
+                          >
+                            <a href={`tel:${student.phone}`}>
+                              <PhoneIcon className="mr-2 size-4" />
+                              전화
+                            </a>
+                          </Button>
+                        )}
+                        {studentSchedule && (
+                          <Button className="min-h-11 flex-1" asChild>
+                            <Link
+                              to={`/admin/schedules/${studentSchedule.schedule_id}/edit`}
+                            >
+                              <CalendarCogIcon className="mr-2 size-4" />
+                              일정 수정
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      {student?.phone && (
-                        <p className="text-sm text-muted-foreground">
-                          {student.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

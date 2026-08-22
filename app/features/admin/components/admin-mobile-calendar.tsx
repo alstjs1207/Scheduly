@@ -1,11 +1,21 @@
-import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
-import { format, addMonths, subMonths } from "date-fns";
+import { addMonths, format, subMonths } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ListIcon,
+  PlusIcon,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 import { MobileMonthGrid } from "~/features/schedules/components/mobile-month-grid";
+
+import {
+  getDateInMonth,
+  getInitialCalendarDate,
+} from "../utils/mobile-calendar";
 import { AdminMobileDayEvents } from "./admin-mobile-day-events";
 
 interface AdminCalendarEvent {
@@ -35,12 +45,23 @@ export function AdminMobileCalendar({
 }: AdminMobileCalendarProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [selectedDate, setSelectedDate] = useState(
-    () => new Date(),
+  const [selectedDate, setSelectedDate] = useState(() =>
+    getInitialCalendarDate(year, month),
   );
   const [displayedMonth, setDisplayedMonth] = useState(
     () => new Date(year, month - 1, 1),
   );
+
+  useEffect(() => {
+    const nextMonth = new Date(year, month - 1, 1);
+    setDisplayedMonth(nextMonth);
+    setSelectedDate((current) => {
+      if (current.getFullYear() === year && current.getMonth() === month - 1) {
+        return current;
+      }
+      return getDateInMonth(current, nextMonth);
+    });
+  }, [month, year]);
 
   const eventColorsByDate = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -61,6 +82,10 @@ export function AdminMobileCalendar({
         ? subMonths(displayedMonth, 1)
         : addMonths(displayedMonth, 1);
     setDisplayedMonth(next);
+
+    // Keep the selected date in the month the administrator is viewing so
+    // the agenda and add button cannot silently point at the previous month.
+    setSelectedDate(getDateInMonth(selectedDate, next));
 
     const newYear = next.getFullYear();
     const newMonth = next.getMonth() + 1;
@@ -84,33 +109,38 @@ export function AdminMobileCalendar({
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-4rem)]">
+    <div className="flex h-[calc(100dvh-4rem)] flex-col">
       {/* Header */}
-      <div className="shrink-0 bg-background border-b pb-2">
+      <div className="bg-background shrink-0 border-b pb-2">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-11 w-11"
+              aria-label="이전 달"
               onClick={() => navigateMonth(-1)}
             >
               <ChevronLeftIcon className="h-4 w-4" />
             </Button>
-            <h2 className="text-base font-semibold min-w-[120px] text-center">
+            <h2 className="min-w-[120px] text-center text-base font-semibold">
               {format(displayedMonth, "yyyy년 M월", { locale: ko })}
             </h2>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-11 w-11"
+              aria-label="다음 달"
               onClick={() => navigateMonth(1)}
             >
               <ChevronRightIcon className="h-4 w-4" />
             </Button>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <Link to={`/admin/schedules/list?${searchParams.toString()}`}>
+          <Button variant="ghost" size="icon" className="h-11 w-11" asChild>
+            <Link
+              to={`/admin/schedules/list?${searchParams.toString()}`}
+              aria-label="일정 목록 보기"
+            >
               <ListIcon className="h-4 w-4" />
             </Link>
           </Button>
@@ -132,24 +162,22 @@ export function AdminMobileCalendar({
       <div className="flex-1 overflow-y-auto">
         {/* Selected date header */}
         <div className="px-4 pt-4 pb-2">
-          <h3 className="text-sm font-medium text-muted-foreground">
+          <h3 className="text-muted-foreground text-sm font-medium">
             {format(selectedDate, "M월 d일 EEEE", { locale: ko })}
           </h3>
         </div>
 
         {/* Day events */}
         <div className="pb-20">
-          <AdminMobileDayEvents
-            events={events}
-            selectedDate={selectedDate}
-          />
+          <AdminMobileDayEvents events={events} selectedDate={selectedDate} />
         </div>
       </div>
 
       {/* FAB */}
       <Link
         to={`/admin/schedules/new?date=${selectedDateStr}`}
-        className="fixed bottom-6 right-6 z-20 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+        aria-label={`${format(selectedDate, "M월 d일", { locale: ko })} 일정 등록`}
+        className="bg-primary text-primary-foreground fixed right-5 bottom-20 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 md:right-6 md:bottom-6"
       >
         <PlusIcon className="h-6 w-6" />
       </Link>
