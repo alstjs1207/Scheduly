@@ -1,6 +1,7 @@
 import type { Route } from "./+types/update";
 
 import { redirect } from "react-router";
+import { z } from "zod";
 
 import { requireMethod } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
@@ -15,9 +16,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   const formData = await request.formData();
   const { studentId } = params;
+  const contactEmail = String(formData.get("email") || "").trim() || null;
+  if (contactEmail && !z.string().email().safeParse(contactEmail).success) {
+    throw new Response("이메일 형식을 확인해 주세요.", { status: 400 });
+  }
 
   // Profile updates (personal info)
   const profileUpdates = {
+    contact_email: contactEmail,
     name: formData.get("name") as string,
     region: formData.get("region") as string,
     birth_date: formData.get("birth_date") as string,

@@ -1,93 +1,93 @@
-/**
- * Student Invite API
- *
- * Generates a password setup link and sends invitation email to the student.
- * Uses Supabase's "recovery" type since the user already exists in auth.users.
- * The student can click the link to set their password and log in.
- */
 import type { Route } from "./+types/invite";
 
 import { data } from "react-router";
-import InviteStudentEmail from "transactional-emails/emails/invite-student";
 
 import { requireMethod } from "~/core/lib/guards.server";
-import resendClient from "~/core/lib/resend-client.server";
 import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
-import { getOrganization } from "~/features/organizations/queries";
 
 import { requireAdminRole } from "../../guards.server";
+import {
+  createStudentInviteToken,
+  getStudentInviteExpiry,
+  hashStudentInviteToken,
+} from "../../lib/student-invite.server";
 import { getStudentById } from "../../queries";
 
 export async function action({ request, params }: Route.ActionArgs) {
   requireMethod("POST")(request);
 
   const [client] = makeServerClient(request);
-  const { organizationId } = await requireAdminRole(client);
+  const { organizationId, user } = await requireAdminRole(client);
+  const student = await getStudentById(client, {
+    organizationId,
+    studentId: params.studentId,
+  });
 
-  const { studentId } = params;
-
-  // 1. Get student info
-  const student = await getStudentById(client, { organizationId, studentId });
-
-  // 2. Get student's email from auth.users
-  const { data: authUser, error: authError } =
-    await adminClient.auth.admin.getUserById(studentId);
-
-  if (authError || !authUser?.user?.email) {
+  if (student.auth_user_id) {
     return data(
-      { success: false, error: "학생 이메일을 찾을 수 없습니다." },
+      { success: false, error: "이미 로그인 계정이 연결된 수강생입니다." },
+      { status: 409 },
+    );
+  }
+
+  const { data: adminProfile, error: adminProfileError } = await adminClient
+    .from("profiles")
+    .select("profile_id")
+    .eq("auth_user_id", user.id)
+    .single();
+
+  if (adminProfileError || !adminProfile) {
+    return data(
+      { success: false, error: "관리자 프로필을 확인할 수 없습니다." },
       { status: 400 },
     );
   }
 
-  const email = authUser.user.email;
+  const token = createStudentInviteToken();
+  const tokenHash = hashStudentInviteToken(token);
+  const expiresAt = getStudentInviteExpiry();
 
-  // 3. Get organization name
-  const organization = await getOrganization(client, { organizationId });
-  const organizationName = organization?.name || "Lestly";
+  const { error: revokeError } = await adminClient
+    .from("student_invites")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("organization_id", organizationId)
+    .eq("profile_id", student.profile_id)
+    .is("used_at", null)
+    .is("revoked_at", null);
 
-  // 4. Generate password reset link using Supabase (recovery type for existing users)
-  const siteUrl = process.env.SITE_URL || "http://localhost:5173";
-  const { data: linkData, error: linkError } =
-    await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: {
-        redirectTo: `${siteUrl}/auth/set-password`,
-      },
+  if (revokeError) {
+    return data(
+      { success: false, error: "기존 초대 링크를 정리하지 못했습니다." },
+      { status: 500 },
+    );
+  }
+
+  const { error: inviteError } = await adminClient
+    .from("student_invites")
+    .insert({
+      organization_id: organizationId,
+      profile_id: student.profile_id,
+      token_hash: tokenHash,
+      expires_at: expiresAt.toISOString(),
+      created_by_profile_id: adminProfile.profile_id,
     });
 
-  if (linkError || !linkData?.properties?.hashed_token) {
-    console.error("Generate Link Error:", linkError);
+  if (inviteError) {
+    console.error("Student invite creation failed", inviteError);
     return data(
       { success: false, error: "초대 링크 생성에 실패했습니다." },
       { status: 500 },
     );
   }
 
-  // Construct link through our /auth/confirm endpoint for proper SSR cookie handling
-  const inviteLink = `${siteUrl}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=recovery&next=/auth/set-password`;
+  const configuredSiteUrl = process.env.SITE_URL?.replace(/\/$/, "");
+  const requestOrigin = new URL(request.url).origin;
+  const siteUrl = configuredSiteUrl || requestOrigin;
 
-  // 5. Send invite email via Resend
-  const { error: emailError } = await resendClient.emails.send({
-    from: "Lestly <hello@mail.lestly.io>",
-    to: [email],
-    subject: `${organizationName}에서 초대되었습니다`,
-    react: InviteStudentEmail({
-      organizationName,
-      studentName: student.name,
-      inviteLink,
-    }),
+  return data({
+    success: true,
+    inviteUrl: `${siteUrl}/invite/${token}`,
+    expiresAt: expiresAt.toISOString(),
   });
-
-  if (emailError) {
-    console.error("Email Send Error:", emailError);
-    return data(
-      { success: false, error: "이메일 발송에 실패했습니다." },
-      { status: 500 },
-    );
-  }
-
-  return data({ success: true });
 }

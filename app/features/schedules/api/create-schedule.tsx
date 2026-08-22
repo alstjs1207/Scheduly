@@ -10,10 +10,10 @@ import {
   validateScheduleCreation,
 } from "~/features/schedules/queries";
 import {
+  DURATION_OPTIONS,
   applyTimeToDate,
   calculateEndTime,
   canStudentRegisterSchedule,
-  DURATION_OPTIONS,
   parseDateString,
 } from "~/features/schedules/utils/student-schedule-rules";
 
@@ -30,11 +30,24 @@ export async function action({ request }: Route.ActionArgs) {
     throw redirect("/login");
   }
 
+  const { data: profile } = await client
+    .from("profiles")
+    .select("profile_id")
+    .eq("auth_user_id", user.id)
+    .single();
+
+  if (!profile) {
+    return data(
+      { success: false, error: "수강생 프로필을 찾을 수 없습니다." },
+      { status: 400 },
+    );
+  }
+
   // Get user's organization membership
   const { data: membership } = await client
     .from("organization_members")
     .select("organization_id")
-    .eq("profile_id", user.id)
+    .eq("profile_id", profile.profile_id)
     .eq("role", "STUDENT")
     .eq("state", "NORMAL")
     .single();
@@ -67,7 +80,9 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   // Get duration hours from form selection (1타임=3시간)
-  const selectedDuration = DURATION_OPTIONS.find((opt) => opt.value === durationValue);
+  const selectedDuration = DURATION_OPTIONS.find(
+    (opt) => opt.value === durationValue,
+  );
   const durationHours = selectedDuration?.hours || 3; // fallback to 3 hours
 
   const startTime = applyTimeToDate(date, startTimeStr);
@@ -82,15 +97,13 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   // Validate concurrent limit and student time conflict in a single query
-  const { allowed, currentCount, maxCount, hasConflict } = await validateScheduleCreation(
-    adminClient,
-    {
+  const { allowed, currentCount, maxCount, hasConflict } =
+    await validateScheduleCreation(adminClient, {
       organizationId,
-      studentId: user.id,
+      studentId: profile.profile_id,
       startTime,
       endTime,
-    },
-  );
+    });
 
   if (!allowed) {
     return data(
@@ -115,7 +128,7 @@ export async function action({ request }: Route.ActionArgs) {
   // Create schedule
   await createSchedule(client, {
     organization_id: organizationId,
-    student_id: user.id,
+    student_id: profile.profile_id,
     program_id: programId,
     start_time: startTime.toISOString(),
     end_time: endTime.toISOString(),

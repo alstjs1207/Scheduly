@@ -1,8 +1,8 @@
 import type { Route } from "./+types/my-schedules";
 
+import { CalendarIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useFetcher } from "react-router";
-import { CalendarIcon } from "lucide-react";
 
 import { Button } from "~/core/components/ui/button";
 import {
@@ -29,12 +29,15 @@ import {
   TableHeader,
   TableRow,
 } from "~/core/components/ui/table";
-import makeServerClient, { getSessionUser } from "~/core/lib/supa-client.server";
+import makeServerClient, {
+  getSessionUser,
+} from "~/core/lib/supa-client.server";
 import { getStudentSchedules } from "~/features/schedules/queries";
 import {
   canStudentCancelSchedule,
   getStudentAllowedDateRange,
 } from "~/features/schedules/utils/student-schedule-rules";
+import { getUserProfile } from "~/features/users/queries";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
@@ -42,11 +45,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!user) {
     throw new Response(null, { status: 401 });
   }
+  const profile = await getUserProfile(client, { userId: user.id });
+  if (!profile) throw new Response(null, { status: 403 });
 
   const { startDate, endDate } = getStudentAllowedDateRange();
 
   const schedules = await getStudentSchedules(client, {
-    studentId: user.id,
+    studentId: profile.profile_id,
     startDate,
     endDate,
   });
@@ -60,7 +65,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 
-export default function MySchedulesScreen({ loaderData }: Route.ComponentProps) {
+export default function MySchedulesScreen({
+  loaderData,
+}: Route.ComponentProps) {
   const { schedules, allowedStartDate, allowedEndDate } = loaderData;
   const cancelFetcher = useFetcher<{ success: boolean; error?: string }>();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -83,7 +90,8 @@ export default function MySchedulesScreen({ loaderData }: Route.ComponentProps) 
         <div>
           <h1 className="text-2xl font-bold">나의 일정</h1>
           <p className="text-muted-foreground">
-            {new Date(allowedStartDate).toLocaleDateString("ko-KR")} ~ {new Date(allowedEndDate).toLocaleDateString("ko-KR")}
+            {new Date(allowedStartDate).toLocaleDateString("ko-KR")} ~{" "}
+            {new Date(allowedEndDate).toLocaleDateString("ko-KR")}
           </p>
         </div>
         <Button asChild>
@@ -103,7 +111,7 @@ export default function MySchedulesScreen({ loaderData }: Route.ComponentProps) 
         </CardHeader>
         <CardContent>
           {schedules.length === 0 ? (
-            <div className="text-center py-8">
+            <div className="py-8 text-center">
               <p className="text-muted-foreground mb-4">
                 등록된 일정이 없습니다.
               </p>
@@ -134,9 +142,12 @@ export default function MySchedulesScreen({ loaderData }: Route.ComponentProps) 
                       className={isPast ? "opacity-60" : ""}
                     >
                       <TableCell className="py-2 font-medium">
-                        {startTime.getMonth() + 1}월 {startTime.getDate()}일({dayLabels[startTime.getDay()]})
+                        {startTime.getMonth() + 1}월 {startTime.getDate()}일(
+                        {dayLabels[startTime.getDay()]})
                       </TableCell>
-                      <TableCell className="py-2">{schedule.program?.title || "-"}</TableCell>
+                      <TableCell className="py-2">
+                        {schedule.program?.title || "-"}
+                      </TableCell>
                       <TableCell className="py-2">
                         {startTime.toLocaleTimeString("ko-KR", {
                           hour: "2-digit",

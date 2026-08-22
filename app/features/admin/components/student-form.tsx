@@ -36,11 +36,17 @@ interface StudentFormProps {
 export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state !== "idle";
-  const [classEndDate, setClassEndDate] = useState(defaultValues?.class_end_date || "");
+  const [classEndDate, setClassEndDate] = useState(
+    defaultValues?.class_end_date || "",
+  );
   const [color, setColor] = useState(defaultValues?.color || "#3B82F6");
 
   const randomizeColor = () => {
-    const hex = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+    const hex =
+      "#" +
+      Math.floor(Math.random() * 0xffffff)
+        .toString(16)
+        .padStart(6, "0");
     setColor(hex);
   };
 
@@ -64,16 +70,20 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
     <fetcher.Form method="post" action={actionUrl} className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="email">이메일 {mode === "create" && "*"}</Label>
+          <Label htmlFor="email">
+            이메일 <span className="text-muted-foreground text-xs">(선택)</span>
+          </Label>
           <Input
             id="email"
             name="email"
             type="email"
-            required={mode === "create"}
-            disabled={mode === "edit"}
             defaultValue={defaultValues?.email}
             placeholder="student@example.com"
           />
+          <p className="text-muted-foreground text-xs">
+            연락용 정보입니다. 로그인 계정은 초대 링크를 수락할 때 별도로
+            연결됩니다.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -89,7 +99,11 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="type">유형 *</Label>
-          <Select name="type" defaultValue={defaultValues?.type || "EXAMINEE"} required>
+          <Select
+            name="type"
+            defaultValue={defaultValues?.type || "EXAMINEE"}
+            required
+          >
             <SelectTrigger>
               <SelectValue placeholder="유형 선택" />
             </SelectTrigger>
@@ -104,7 +118,10 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
         {mode === "edit" && (
           <div className="space-y-2">
             <Label htmlFor="state">상태</Label>
-            <Select name="state" defaultValue={defaultValues?.state || "NORMAL"}>
+            <Select
+              name="state"
+              defaultValue={defaultValues?.state || "NORMAL"}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="상태 선택" />
               </SelectTrigger>
@@ -172,7 +189,7 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             value={classEndDate}
             onChange={(e) => setClassEndDate(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             수업 시작일 입력 시 자동으로 1년 후로 설정됩니다.
           </p>
         </div>
@@ -209,7 +226,12 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
               onChange={(e) => setColor(e.target.value)}
               className="h-10 w-20"
             />
-            <Button type="button" variant="outline" size="sm" onClick={randomizeColor}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={randomizeColor}
+            >
               랜덤
             </Button>
           </div>

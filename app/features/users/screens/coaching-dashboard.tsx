@@ -49,6 +49,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     };
   }
 
+  const { data: profile } = await client
+    .from("profiles")
+    .select("profile_id")
+    .eq("auth_user_id", user.id)
+    .single();
+  if (!profile) throw new Response(null, { status: 403 });
+  const studentId = profile.profile_id;
+
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -62,13 +70,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     streak,
     programBreakdown,
   ] = await Promise.all([
-    getStudentSchedules(client, { studentId: user.id, year, month }),
-    calculateStudentTotalHours(client, { studentId: user.id }),
-    getStudentYearlyStats(client, { studentId: user.id, year }),
-    getStudentMonthlyStats(client, { studentId: user.id }),
-    getStudentClassDates(client, { studentId: user.id }),
-    getStudentStreak(client, { studentId: user.id }),
-    getStudentProgramHoursBreakdown(client, { studentId: user.id, year }),
+    getStudentSchedules(client, { studentId, year, month }),
+    calculateStudentTotalHours(client, { studentId }),
+    getStudentYearlyStats(client, { studentId, year }),
+    getStudentMonthlyStats(client, { studentId }),
+    getStudentClassDates(client, { studentId }),
+    getStudentStreak(client, { studentId }),
+    getStudentProgramHoursBreakdown(client, { studentId, year }),
   ]);
 
   // 이번 달 전체 수업 시간 계산 (goalHours)
@@ -80,7 +88,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   }, 0);
 
   // 남은 수업 (아직 시작 안 한 수업)
-  const remainingSchedules = schedules.filter((s) => new Date(s.start_time) > now);
+  const remainingSchedules = schedules.filter(
+    (s) => new Date(s.start_time) > now,
+  );
   const upcomingSchedules = remainingSchedules.slice(0, 5);
 
   const nextSchedule = upcomingSchedules[0] || null;
@@ -107,7 +117,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
-export default function CoachingDashboard({ loaderData }: Route.ComponentProps) {
+export default function CoachingDashboard({
+  loaderData,
+}: Route.ComponentProps) {
   const {
     totalHours,
     streak,
@@ -122,7 +134,7 @@ export default function CoachingDashboard({ loaderData }: Route.ComponentProps) 
   } = loaderData;
 
   return (
-    <div className="flex flex-1 flex-col gap-3 bg-gray-50 p-4 text-gray-900 dark:bg-[#0d0d14] dark:text-gray-100 md:gap-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-3 bg-gray-50 p-4 text-gray-900 md:gap-4 md:p-6 dark:bg-[#0d0d14] dark:text-gray-100">
       {/* 헤더 */}
       <HeaderSection daysRemaining={daysRemaining} />
 

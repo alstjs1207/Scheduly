@@ -49,6 +49,8 @@ export async function getStudentsPaginated(
       created_at,
       profiles!inner (
         profile_id,
+        auth_user_id,
+        contact_email,
         name,
         avatar_url,
         phone,
@@ -312,41 +314,6 @@ export async function getStudentsTotalHours(
   }
 
   return hoursByStudent;
-}
-
-/**
- * Get emails for multiple users from auth.users (requires adminClient)
- */
-export async function getStudentEmails(
-  adminClient: SupabaseClient<Database>,
-  { studentIds }: { studentIds: string[] },
-): Promise<Record<string, string>> {
-  if (studentIds.length === 0) return {};
-
-  const emailMap: Record<string, string> = {};
-  const remainingIds = new Set(studentIds);
-  const perPage = 1000;
-  let page = 1;
-
-  while (remainingIds.size > 0) {
-    const { data, error } = await adminClient.auth.admin.listUsers({
-      page,
-      perPage,
-    });
-
-    if (error) break;
-
-    for (const user of data.users) {
-      if (!remainingIds.has(user.id)) continue;
-      if (user.email) emailMap[user.id] = user.email;
-      remainingIds.delete(user.id);
-    }
-
-    if (data.users.length < perPage) break;
-    page += 1;
-  }
-
-  return emailMap;
 }
 
 /**

@@ -1,14 +1,13 @@
 /**
  * Student Creation API
  *
- * Creates a new student with:
- * 1. Supabase auth user
- * 2. Profile record
- * 3. Organization membership with STUDENT role
+ * Creates a management profile and organization membership. Authentication is
+ * connected later only when the administrator creates an invitation link.
  */
 import type { Route } from "./+types/create";
 
 import { redirect } from "react-router";
+import { z } from "zod";
 
 import { requireMethod } from "~/core/lib/guards.server";
 import adminClient from "~/core/lib/supa-admin-client.server";
@@ -24,38 +23,22 @@ export async function action({ request }: Route.ActionArgs) {
 
   const formData = await request.formData();
 
-  const email = formData.get("email") as string;
-  const name = formData.get("name") as string;
+  const email = String(formData.get("email") || "").trim() || null;
+  const name = String(formData.get("name") || "").trim();
   const studentType = formData.get("type") as "EXAMINEE" | "DROPPER" | "ADULT";
 
-  // 임시 비밀번호 생성 (사용자는 비밀번호 재설정으로 변경해야 함)
-  const tempPassword = crypto.randomUUID();
-
-  // 1. auth.users에 사용자 생성
-  const { data: authData, error: authError } =
-    await adminClient.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        name,
-      },
-      app_metadata: {
-        provider: "email",
-        admin_created: true, // 트리거에서 admin 생성을 구분하기 위해
-      },
-    });
-
-  if (authError) {
-    console.error("Auth Error Details:", JSON.stringify(authError, null, 2));
-    throw new Error(
-      `${authError.message} - ${authError.status} - ${authError.code}`,
-    );
+  if (!name) {
+    throw new Response("이름은 필수입니다.", { status: 400 });
+  }
+  if (email && !z.string().email().safeParse(email).success) {
+    throw new Response("이메일 형식을 확인해 주세요.", { status: 400 });
   }
 
-  // 2. profiles에 학생 정보 직접 INSERT (adminClient는 RLS 우회)
+  const profileId = crypto.randomUUID();
   const studentData = {
-    profile_id: authData.user.id,
+    profile_id: profileId,
+    auth_user_id: null,
+    contact_email: email,
     name,
     region: formData.get("region") as string,
     birth_date: formData.get("birth_date") as string,
@@ -71,11 +54,9 @@ export async function action({ request }: Route.ActionArgs) {
 
   const { error: profileError } = await adminClient
     .from("profiles")
-    .upsert(studentData, { onConflict: "profile_id" });
+    .insert(studentData);
 
   if (profileError) {
-    // 프로필 생성 실패 시 생성된 사용자 삭제
-    await adminClient.auth.admin.deleteUser(authData.user.id);
     throw new Error(profileError.message);
   }
 
@@ -84,18 +65,16 @@ export async function action({ request }: Route.ActionArgs) {
     .from("organization_members")
     .insert({
       organization_id: organizationId,
-      profile_id: authData.user.id,
+      profile_id: profileId,
       role: "STUDENT",
       state: "NORMAL",
       type: studentType,
     });
 
   if (memberError) {
-    // 멤버십 생성 실패 시 프로필과 사용자 삭제
-    await adminClient.from("profiles").delete().eq("profile_id", authData.user.id);
-    await adminClient.auth.admin.deleteUser(authData.user.id);
+    await adminClient.from("profiles").delete().eq("profile_id", profileId);
     throw new Error(memberError.message);
   }
 
-  return redirect(`/admin/students/${authData.user.id}`);
+  return redirect(`/admin/students/${profileId}`);
 }

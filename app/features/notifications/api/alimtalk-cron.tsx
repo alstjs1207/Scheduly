@@ -149,21 +149,14 @@ export async function action({ request }: Route.ActionArgs) {
           // Get student info with email
           const { data: student } = await adminClient
             .from("profiles")
-            .select("name, phone")
+            .select("name, phone, contact_email")
             .eq("profile_id", schedule.student_id)
             .single();
 
           if (!student) continue;
           if (!student.phone && alimtalkEnabled) continue;
 
-          // Get student email from auth.users
-          let studentEmail: string | null = null;
-          if (emailEnabled) {
-            const { data: user } = await adminClient.auth.admin.getUserById(
-              schedule.student_id,
-            );
-            studentEmail = user?.user?.email || null;
-          }
+          const studentEmail = emailEnabled ? student.contact_email : null;
 
           // Store student info for later use
           const studentName = student.name || "";
@@ -286,18 +279,13 @@ export async function action({ request }: Route.ActionArgs) {
       for (const schedule of defaultSchedules || []) {
         const { data: student } = await adminClient
           .from("profiles")
-          .select("name, phone")
+          .select("name, phone, contact_email")
           .eq("profile_id", schedule.student_id)
           .single();
 
         if (!student?.phone) continue;
 
-        // Get student email from auth.users (default: email enabled)
-        let studentEmail: string | null = null;
-        const { data: user } = await adminClient.auth.admin.getUserById(
-          schedule.student_id,
-        );
-        studentEmail = user?.user?.email || null;
+        const studentEmail = student.contact_email;
 
         const { data: existing } = await adminClient
           .from("notifications")

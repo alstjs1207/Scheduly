@@ -24,7 +24,9 @@ import { timestamps } from "~/core/db/helpers";
  * Profiles Table
  *
  * Stores additional user profile information beyond the core auth data.
- * Links to Supabase auth.users table via profile_id foreign key.
+ * profile_id is the stable domain identifier used by schedules and memberships.
+ * auth_user_id is nullable so an admin can manage a student before the student
+ * accepts an invitation and connects a login account.
  *
  * Organization membership, role, state, and type are managed through
  * the organization_members table (N:N relationship).
@@ -35,13 +37,11 @@ import { timestamps } from "~/core/db/helpers";
 export const profiles = pgTable(
   "profiles",
   {
-    // Primary key that references the Supabase auth.users id
-    // Using CASCADE ensures profile is deleted when user is deleted
-    profile_id: uuid()
-      .primaryKey()
-      .references(() => authUsers.id, {
-        onDelete: "cascade",
-      }),
+    profile_id: uuid().primaryKey().defaultRandom(),
+    auth_user_id: uuid("auth_user_id")
+      .unique()
+      .references(() => authUsers.id, { onDelete: "set null" }),
+    contact_email: text("contact_email"),
     name: text().notNull(),
     avatar_url: text(),
     marketing_consent: boolean("marketing_consent").notNull().default(false),
@@ -65,22 +65,22 @@ export const profiles = pgTable(
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`${authUid} = ${table.profile_id}`,
-      using: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`${authUid} = ${table.auth_user_id}`,
+      using: sql`${authUid} = ${table.auth_user_id}`,
     }),
     // RLS Policy: Users can only delete their own profile
     pgPolicy("delete-profile-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
+      using: sql`${authUid} = ${table.auth_user_id}`,
     }),
     // RLS Policy: Users can only view their own profile
     pgPolicy("select-profile-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
+      using: sql`${authUid} = ${table.auth_user_id}`,
     }),
     // RLS Policy: ADMIN can view profiles of members in their organizations
     // Uses organization_members junction table
@@ -89,12 +89,9 @@ export const profiles = pgTable(
       to: authenticatedRole,
       as: "permissive",
       using: sql`EXISTS (
-        SELECT 1 FROM organization_members om1
-        JOIN organization_members om2 ON om1.organization_id = om2.organization_id
-        WHERE om1.profile_id = auth.uid()
-        AND om1.role = 'ADMIN'
-        AND om1.state = 'NORMAL'
-        AND om2.profile_id = ${table.profile_id}
+        SELECT 1 FROM organization_members target_membership
+        WHERE target_membership.profile_id = ${table.profile_id}
+        AND is_org_admin(target_membership.organization_id)
       )`,
     }),
     // RLS Policy: ADMIN can update profiles of members in their organizations
@@ -103,20 +100,14 @@ export const profiles = pgTable(
       to: authenticatedRole,
       as: "permissive",
       using: sql`EXISTS (
-        SELECT 1 FROM organization_members om1
-        JOIN organization_members om2 ON om1.organization_id = om2.organization_id
-        WHERE om1.profile_id = auth.uid()
-        AND om1.role = 'ADMIN'
-        AND om1.state = 'NORMAL'
-        AND om2.profile_id = ${table.profile_id}
+        SELECT 1 FROM organization_members target_membership
+        WHERE target_membership.profile_id = ${table.profile_id}
+        AND is_org_admin(target_membership.organization_id)
       )`,
       withCheck: sql`EXISTS (
-        SELECT 1 FROM organization_members om1
-        JOIN organization_members om2 ON om1.organization_id = om2.organization_id
-        WHERE om1.profile_id = auth.uid()
-        AND om1.role = 'ADMIN'
-        AND om1.state = 'NORMAL'
-        AND om2.profile_id = ${table.profile_id}
+        SELECT 1 FROM organization_members target_membership
+        WHERE target_membership.profile_id = ${table.profile_id}
+        AND is_org_admin(target_membership.organization_id)
       )`,
     }),
   ],

@@ -1,9 +1,9 @@
 /**
  * Application Routes Configuration
- * 
+ *
  * This file defines all routes for the application using React Router's
  * file-based routing system. Routes are organized by feature and access level.
- * 
+ *
  * The structure uses layouts for shared UI elements and prefixes for route grouping.
  * This approach creates a hierarchical routing system that's both maintainable and scalable.
  */
@@ -57,18 +57,31 @@ export default [
 
   // 공개 클래스 소개 페이지 (로그인 없이 접근 가능)
   route("/class/:slug", "features/class/screens/class-detail.tsx"),
+  route("/invite/:token", "features/auth/screens/student-invite.tsx"),
 
   // Full-screen auth routes (without navigation bar)
   layout("core/layouts/public.layout.tsx", { id: "public-fullscreen" }, [
     route("/login", "features/auth/screens/login.tsx"),
     route("/admin/signup", "features/auth/screens/admin-signup.tsx"),
-    route("/admin/signup/verify", "features/auth/screens/admin-signup-verify.tsx"),
-    route("/auth/forgot-password/reset", "features/auth/screens/forgot-password.tsx"),
+    route(
+      "/admin/signup/verify",
+      "features/auth/screens/admin-signup-verify.tsx",
+    ),
+    route(
+      "/auth/forgot-password/reset",
+      "features/auth/screens/forgot-password.tsx",
+    ),
   ]),
 
   // Admin signup flow (requires authentication, no layout redirect)
-  route("/admin/signup/profile", "features/auth/screens/admin-signup-profile.tsx"),
-  route("/admin/signup/organization", "features/auth/screens/admin-organization-setup.tsx"),
+  route(
+    "/admin/signup/profile",
+    "features/auth/screens/admin-signup-profile.tsx",
+  ),
+  route(
+    "/admin/signup/organization",
+    "features/auth/screens/admin-organization-setup.tsx",
+  ),
 
   // Set password (full-screen, no navigation bar, requires authentication)
   layout("core/layouts/private.layout.tsx", { id: "private-set-password" }, [
@@ -146,7 +159,10 @@ export default [
           index("features/admin/screens/schedules/calendar.tsx"),
           route("/list", "features/admin/screens/schedules/list.tsx"),
           route("/new", "features/admin/screens/schedules/create.tsx"),
-          route("/:scheduleId/edit", "features/admin/screens/schedules/edit.tsx"),
+          route(
+            "/:scheduleId/edit",
+            "features/admin/screens/schedules/edit.tsx",
+          ),
         ]),
         ...prefix("/programs", [
           index("features/admin/screens/programs/list.tsx"),
@@ -157,12 +173,18 @@ export default [
         ...prefix("/instructors", [
           index("features/admin/screens/instructors/list.tsx"),
           route("/new", "features/admin/screens/instructors/create.tsx"),
-          route("/:instructorId/edit", "features/admin/screens/instructors/edit.tsx"),
+          route(
+            "/:instructorId/edit",
+            "features/admin/screens/instructors/edit.tsx",
+          ),
         ]),
         ...prefix("/notifications", [
           index("features/notifications/screens/list.tsx"),
           route("/templates", "features/notifications/screens/templates.tsx"),
-          route("/:notificationId", "features/notifications/screens/detail.tsx"),
+          route(
+            "/:notificationId",
+            "features/notifications/screens/detail.tsx",
+          ),
         ]),
         route("/organization", "features/admin/screens/organization.tsx"),
         route("/settings", "features/admin/screens/settings.tsx"),
@@ -203,8 +225,14 @@ export default [
     ]),
     ...prefix("/instructors", [
       route("/create", "features/admin/api/instructors/create.tsx"),
-      route("/:instructorId/update", "features/admin/api/instructors/update.tsx"),
-      route("/:instructorId/delete", "features/admin/api/instructors/delete.tsx"),
+      route(
+        "/:instructorId/update",
+        "features/admin/api/instructors/update.tsx",
+      ),
+      route(
+        "/:instructorId/delete",
+        "features/admin/api/instructors/delete.tsx",
+      ),
     ]),
     route("/settings", "features/admin/api/settings/update.tsx"),
     route("/organization", "features/admin/api/organization/update.tsx"),
@@ -212,12 +240,16 @@ export default [
 
   // Student Schedule Routes
   layout("core/layouts/private.layout.tsx", { id: "private-schedules" }, [
-    layout("features/users/layouts/dashboard.layout.tsx", { id: "dashboard-schedules" }, [
-      ...prefix("/my-schedules", [
-        index("features/schedules/screens/calendar.tsx"),
-        route("/list", "features/schedules/screens/my-schedules.tsx"),
-      ]),
-    ]),
+    layout(
+      "features/users/layouts/dashboard.layout.tsx",
+      { id: "dashboard-schedules" },
+      [
+        ...prefix("/my-schedules", [
+          index("features/schedules/screens/calendar.tsx"),
+          route("/list", "features/schedules/screens/my-schedules.tsx"),
+        ]),
+      ],
+    ),
   ]),
 
   // Student Schedule API Routes

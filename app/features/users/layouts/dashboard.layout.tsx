@@ -8,8 +8,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "~/core/components/ui/sidebar";
-import makeServerClient, { getSessionUser } from "~/core/lib/supa-client.server";
+import makeServerClient, {
+  getSessionUser,
+} from "~/core/lib/supa-client.server";
 import { getUserOrganizations } from "~/features/organizations/queries";
+import { getUserProfile } from "~/features/users/queries";
 
 import DashboardSidebar from "../components/dashboard-sidebar";
 
@@ -20,7 +23,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   // 사용자의 조직 정보 조회
   let organizationName = null;
   if (user) {
-    const orgs = await getUserOrganizations(client, { profileId: user.id });
+    const profile = await getUserProfile(client, { userId: user.id });
+    const orgs = await getUserOrganizations(client, {
+      profileId: profile?.profile_id || user.id,
+    });
     if (orgs.length > 0 && orgs[0].organizations) {
       organizationName = orgs[0].organizations.name;
     }
@@ -48,7 +54,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
             {organizationName && (
-              <span className="font-semibold text-lg">{organizationName}</span>
+              <span className="text-lg font-semibold">{organizationName}</span>
             )}
           </div>
           <div className="ml-auto flex items-center gap-2 px-4">

@@ -1,8 +1,16 @@
 import type { Route } from "./+types/detail";
 
+import {
+  CheckIcon,
+  ChevronLeftIcon,
+  ClipboardIcon,
+  EditIcon,
+  GraduationCapIcon,
+  LinkIcon,
+  TrashIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useFetcher } from "react-router";
-import { CheckIcon, ChevronLeftIcon, ClipboardIcon, EditIcon, GraduationCapIcon, MailIcon, TrashIcon } from "lucide-react";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
@@ -30,7 +38,6 @@ import {
   TableHeader,
   TableRow,
 } from "~/core/components/ui/table";
-import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 import {
   calculateStudentTotalHours,
@@ -53,17 +60,29 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
   const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
-  const [student, weeklySchedules, nextWeekSchedules, monthlySchedules, nextMonthSchedules, totalHours, authUser] = await Promise.all([
+  const [
+    student,
+    weeklySchedules,
+    nextWeekSchedules,
+    monthlySchedules,
+    nextMonthSchedules,
+    totalHours,
+  ] = await Promise.all([
     getStudentById(client, { organizationId, studentId: params.studentId }),
     getStudentWeeklySchedules(client, { studentId: params.studentId }),
     getStudentNextWeekSchedules(client, { studentId: params.studentId }),
-    getStudentSchedules(client, { studentId: params.studentId, year: currentYear, month: currentMonth }),
-    getStudentSchedules(client, { studentId: params.studentId, year: nextMonthYear, month: nextMonth }),
+    getStudentSchedules(client, {
+      studentId: params.studentId,
+      year: currentYear,
+      month: currentMonth,
+    }),
+    getStudentSchedules(client, {
+      studentId: params.studentId,
+      year: nextMonthYear,
+      month: nextMonth,
+    }),
     calculateStudentTotalHours(client, { studentId: params.studentId }),
-    adminClient.auth.admin.getUserById(params.studentId),
   ]);
-
-  const email = authUser?.data?.user?.email;
 
   return {
     student,
@@ -76,11 +95,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     nextMonthYear,
     nextMonth,
     totalHours: Math.round(totalHours * 10) / 10,
-    email,
   };
 }
 
-const stateLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
+const stateLabels: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" }
+> = {
   NORMAL: { label: "정상", variant: "default" },
   GRADUATE: { label: "졸업", variant: "secondary" },
   DELETED: { label: "탈퇴", variant: "destructive" },
@@ -97,10 +118,27 @@ const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 export default function StudentDetailScreen({
   loaderData,
 }: Route.ComponentProps) {
-  const { student, weeklySchedules, nextWeekSchedules, monthlySchedules, nextMonthSchedules, currentYear, currentMonth, nextMonthYear, nextMonth, totalHours, email } = loaderData;
+  const {
+    student,
+    weeklySchedules,
+    nextWeekSchedules,
+    monthlySchedules,
+    nextMonthSchedules,
+    currentYear,
+    currentMonth,
+    nextMonthYear,
+    nextMonth,
+    totalHours,
+  } = loaderData;
   const graduateFetcher = useFetcher();
   const deleteFetcher = useFetcher();
-  const inviteFetcher = useFetcher<{ success: boolean; error?: string }>();
+  const inviteFetcher = useFetcher<{
+    success: boolean;
+    error?: string;
+    inviteUrl?: string;
+    expiresAt?: string;
+  }>();
+  const [copiedInvite, setCopiedInvite] = useState(false);
   const [copiedCurrent, setCopiedCurrent] = useState(false);
   const [copiedNext, setCopiedNext] = useState(false);
 
@@ -109,7 +147,10 @@ export default function StudentDetailScreen({
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birth.getDate())
+    ) {
       age--;
     }
     return age;
@@ -126,13 +167,14 @@ export default function StudentDetailScreen({
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl md:text-2xl font-bold">{student.name}</h1>
+              <h1 className="text-xl font-bold md:text-2xl">{student.name}</h1>
               <Badge variant={stateLabels[student.state]?.variant || "default"}>
                 {stateLabels[student.state]?.label || student.state}
               </Badge>
             </div>
-            <p className="hidden md:block text-muted-foreground">
-              {student.type ? typeLabels[student.type] : "-"} · {student.region || "-"}
+            <p className="text-muted-foreground hidden md:block">
+              {student.type ? typeLabels[student.type] : "-"} ·{" "}
+              {student.region || "-"}
             </p>
           </div>
         </div>
@@ -145,46 +187,81 @@ export default function StudentDetailScreen({
           </Button>
           {student.state === "NORMAL" && (
             <>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <MailIcon className="h-4 w-4 md:mr-2" />
-                    <span className="hidden md:inline">초대 발송</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>초대 이메일 발송</DialogTitle>
-                    <DialogDescription>
-                      {student.name} ({email}) 수강생에게 초대 이메일을 발송하시겠습니까?
-                      수강생은 이메일을 통해 비밀번호를 설정하고 로그인할 수 있습니다.
-                    </DialogDescription>
-                  </DialogHeader>
-                  {inviteFetcher.data?.success === false && (
-                    <p className="text-sm text-destructive">
-                      {inviteFetcher.data.error}
-                    </p>
-                  )}
-                  {inviteFetcher.data?.success === true && (
-                    <p className="text-sm text-green-600">
-                      초대 이메일이 발송되었습니다.
-                    </p>
-                  )}
-                  <DialogFooter>
-                    <inviteFetcher.Form
-                      method="post"
-                      action={`/api/admin/students/${student.profile_id}/invite`}
-                    >
-                      <Button
-                        type="submit"
-                        disabled={inviteFetcher.state !== "idle"}
+              {!student.auth_user_id && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <LinkIcon className="h-4 w-4 md:mr-2" />
+                      <span className="hidden md:inline">초대 링크</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>초대 링크 만들기</DialogTitle>
+                      <DialogDescription>
+                        링크를 복사해 {student.name} 수강생에게 카카오톡으로
+                        전달하세요. 링크는 7일 동안 유효하며 한 번만 사용할 수
+                        있습니다.
+                      </DialogDescription>
+                    </DialogHeader>
+                    {inviteFetcher.data?.success === false && (
+                      <p className="text-destructive text-sm">
+                        {inviteFetcher.data.error}
+                      </p>
+                    )}
+                    {inviteFetcher.data?.success === true && (
+                      <p className="text-sm text-green-600">
+                        초대 링크가 생성되었습니다. 새 링크를 만들면 이전 링크는
+                        사용할 수 없습니다.
+                      </p>
+                    )}
+                    {inviteFetcher.data?.inviteUrl && (
+                      <div className="flex gap-2">
+                        <code className="bg-muted min-w-0 flex-1 truncate rounded-md px-3 py-2 text-xs">
+                          {inviteFetcher.data.inviteUrl}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              inviteFetcher.data!.inviteUrl!,
+                            );
+                            setCopiedInvite(true);
+                            setTimeout(() => setCopiedInvite(false), 2000);
+                          }}
+                        >
+                          {copiedInvite ? (
+                            <CheckIcon className="size-4" />
+                          ) : (
+                            <ClipboardIcon className="size-4" />
+                          )}
+                          <span className="ml-1">
+                            {copiedInvite ? "복사됨" : "복사"}
+                          </span>
+                        </Button>
+                      </div>
+                    )}
+                    <DialogFooter>
+                      <inviteFetcher.Form
+                        method="post"
+                        action={`/api/admin/students/${student.profile_id}/invite`}
                       >
-                        {inviteFetcher.state !== "idle" ? "발송 중..." : "발송"}
-                      </Button>
-                    </inviteFetcher.Form>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                        <Button
+                          type="submit"
+                          disabled={inviteFetcher.state !== "idle"}
+                        >
+                          {inviteFetcher.state !== "idle"
+                            ? "생성 중..."
+                            : inviteFetcher.data?.inviteUrl
+                              ? "새 링크 만들기"
+                              : "링크 만들기"}
+                        </Button>
+                      </inviteFetcher.Form>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
 
               <Dialog>
                 <DialogTrigger asChild>
@@ -252,25 +329,31 @@ export default function StudentDetailScreen({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">이름</p>
+                <p className="text-muted-foreground text-sm">이름</p>
                 <p className="font-medium">{student.name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">이메일</p>
-                <p className="font-medium">{email || "-"}</p>
+                <p className="text-muted-foreground text-sm">이메일</p>
+                <p className="font-medium">{student.contact_email || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">유형</p>
+                <p className="text-muted-foreground text-sm">로그인 연결</p>
+                <p className="font-medium">
+                  {student.auth_user_id ? "연결됨" : "관리 전용"}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">유형</p>
                 <p className="font-medium">
                   {student.type ? typeLabels[student.type] : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">지역</p>
+                <p className="text-muted-foreground text-sm">지역</p>
                 <p className="font-medium">{student.region || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">나이</p>
+                <p className="text-muted-foreground text-sm">나이</p>
                 <p className="font-medium">
                   {student.birth_date
                     ? `${calculateAge(student.birth_date)}세 (${student.birth_date})`
@@ -278,23 +361,25 @@ export default function StudentDetailScreen({
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">전화번호</p>
+                <p className="text-muted-foreground text-sm">전화번호</p>
                 <p className="font-medium">{student.phone || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">캘린더 색상</p>
+                <p className="text-muted-foreground text-sm">캘린더 색상</p>
                 <div className="flex items-center gap-2">
                   <div
                     className="h-4 w-4 rounded"
                     style={{ backgroundColor: student.color || "#3B82F6" }}
                   />
-                  <span className="font-medium">{student.color || "#3B82F6"}</span>
+                  <span className="font-medium">
+                    {student.color || "#3B82F6"}
+                  </span>
                 </div>
               </div>
             </div>
             {student.description && (
               <div>
-                <p className="text-sm text-muted-foreground">설명</p>
+                <p className="text-muted-foreground text-sm">설명</p>
                 <p className="font-medium whitespace-pre-wrap">
                   {student.description}
                 </p>
@@ -310,20 +395,20 @@ export default function StudentDetailScreen({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">수업 시작일</p>
+                <p className="text-muted-foreground text-sm">수업 시작일</p>
                 <p className="font-medium">{student.class_start_date || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">수업 종료일</p>
+                <p className="text-muted-foreground text-sm">수업 종료일</p>
                 <p className="font-medium">{student.class_end_date || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">총 수강시간</p>
+                <p className="text-muted-foreground text-sm">총 수강시간</p>
                 <p className="font-medium">{totalHours}시간</p>
               </div>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">학부모 정보</p>
+              <p className="text-muted-foreground text-sm">학부모 정보</p>
               <p className="font-medium">
                 {student.parent_name || "-"}{" "}
                 {student.parent_phone && `(${student.parent_phone})`}
@@ -337,7 +422,9 @@ export default function StudentDetailScreen({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>{currentYear}년 {currentMonth}월 일정</CardTitle>
+              <CardTitle>
+                {currentYear}년 {currentMonth}월 일정
+              </CardTitle>
               <CardDescription>이번 달의 수업 일정입니다.</CardDescription>
             </div>
             <Button
@@ -372,15 +459,21 @@ export default function StudentDetailScreen({
               }}
             >
               {copiedCurrent ? (
-                <><CheckIcon className="h-4 w-4 mr-1" />복사됨</>
+                <>
+                  <CheckIcon className="mr-1 h-4 w-4" />
+                  복사됨
+                </>
               ) : (
-                <><ClipboardIcon className="h-4 w-4 mr-1" />복사</>
+                <>
+                  <ClipboardIcon className="mr-1 h-4 w-4" />
+                  복사
+                </>
               )}
             </Button>
           </CardHeader>
           <CardContent>
             {monthlySchedules.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center">
                 이번 달 등록된 일정이 없습니다.
               </p>
             ) : (
@@ -405,10 +498,10 @@ export default function StudentDetailScreen({
                             day: "numeric",
                           })}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">{dayLabels[startDate.getDay()]}</TableCell>
-                        <TableCell>
-                          {schedule.program?.title || "-"}
+                        <TableCell className="hidden md:table-cell">
+                          {dayLabels[startDate.getDay()]}
                         </TableCell>
+                        <TableCell>{schedule.program?.title || "-"}</TableCell>
                         <TableCell>
                           {startDate.toLocaleTimeString("ko-KR", {
                             hour: "2-digit",
@@ -432,7 +525,9 @@ export default function StudentDetailScreen({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>{nextMonthYear}년 {nextMonth}월 일정</CardTitle>
+              <CardTitle>
+                {nextMonthYear}년 {nextMonth}월 일정
+              </CardTitle>
               <CardDescription>다음 달의 수업 일정입니다.</CardDescription>
             </div>
             <Button
@@ -467,15 +562,21 @@ export default function StudentDetailScreen({
               }}
             >
               {copiedNext ? (
-                <><CheckIcon className="h-4 w-4 mr-1" />복사됨</>
+                <>
+                  <CheckIcon className="mr-1 h-4 w-4" />
+                  복사됨
+                </>
               ) : (
-                <><ClipboardIcon className="h-4 w-4 mr-1" />복사</>
+                <>
+                  <ClipboardIcon className="mr-1 h-4 w-4" />
+                  복사
+                </>
               )}
             </Button>
           </CardHeader>
           <CardContent>
             {nextMonthSchedules.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center">
                 다음 달 등록된 일정이 없습니다.
               </p>
             ) : (
@@ -500,10 +601,10 @@ export default function StudentDetailScreen({
                             day: "numeric",
                           })}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">{dayLabels[startDate.getDay()]}</TableCell>
-                        <TableCell>
-                          {schedule.program?.title || "-"}
+                        <TableCell className="hidden md:table-cell">
+                          {dayLabels[startDate.getDay()]}
                         </TableCell>
+                        <TableCell>{schedule.program?.title || "-"}</TableCell>
                         <TableCell>
                           {startDate.toLocaleTimeString("ko-KR", {
                             hour: "2-digit",
@@ -533,7 +634,7 @@ export default function StudentDetailScreen({
           </CardHeader>
           <CardContent>
             {weeklySchedules.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center">
                 이번 주 등록된 일정이 없습니다.
               </p>
             ) : (
@@ -558,10 +659,10 @@ export default function StudentDetailScreen({
                             day: "numeric",
                           })}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">{dayLabels[startDate.getDay()]}</TableCell>
-                        <TableCell>
-                          {schedule.program?.title || "-"}
+                        <TableCell className="hidden md:table-cell">
+                          {dayLabels[startDate.getDay()]}
                         </TableCell>
+                        <TableCell>{schedule.program?.title || "-"}</TableCell>
                         <TableCell>
                           {startDate.toLocaleTimeString("ko-KR", {
                             hour: "2-digit",
@@ -589,7 +690,7 @@ export default function StudentDetailScreen({
           </CardHeader>
           <CardContent>
             {nextWeekSchedules.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center">
                 다음 주 등록된 일정이 없습니다.
               </p>
             ) : (
@@ -614,10 +715,10 @@ export default function StudentDetailScreen({
                             day: "numeric",
                           })}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">{dayLabels[startDate.getDay()]}</TableCell>
-                        <TableCell>
-                          {schedule.program?.title || "-"}
+                        <TableCell className="hidden md:table-cell">
+                          {dayLabels[startDate.getDay()]}
                         </TableCell>
+                        <TableCell>{schedule.program?.title || "-"}</TableCell>
                         <TableCell>
                           {startDate.toLocaleTimeString("ko-KR", {
                             hour: "2-digit",
