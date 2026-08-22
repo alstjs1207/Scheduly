@@ -22,19 +22,25 @@ export default function AdminMobileNav() {
       className="bg-background/95 fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-4 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       {items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          className={({ isActive }) =>
-            cn(
-              "text-muted-foreground flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium",
-              isActive && "text-primary",
-            )
-          }
-        >
-          <item.icon className="size-5" aria-hidden="true" />
-          <span>{item.label}</span>
+        <NavLink key={item.to} to={item.to} end={item.end} className="min-h-14">
+          {({ isActive }) => (
+            <span
+              className={cn(
+                "text-muted-foreground flex h-full flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium transition-colors",
+                isActive && "text-primary",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-8 min-w-14 items-center justify-center rounded-full transition-colors",
+                  isActive && "bg-primary/15",
+                )}
+              >
+                <item.icon className="size-5" aria-hidden="true" />
+              </span>
+              <span>{item.label}</span>
+            </span>
+          )}
         </NavLink>
       ))}
     </nav>

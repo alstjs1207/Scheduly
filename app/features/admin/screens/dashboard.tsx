@@ -164,14 +164,14 @@ export default function AdminDashboardScreen({
       </div>
 
       <Card className="md:hidden">
-        <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 space-y-0">
           <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarIcon className="h-5 w-5" />
+            <CalendarIcon className="text-primary h-5 w-5" />
             다가오는 일정
           </CardTitle>
           <Link
             to="/admin/schedules"
-            className="text-primary flex min-h-11 items-center gap-1 text-sm font-medium"
+            className="text-primary flex min-h-11 items-center justify-self-end rounded-full px-2 text-sm font-semibold"
           >
             전체 보기
             <ArrowRightIcon className="size-4" />

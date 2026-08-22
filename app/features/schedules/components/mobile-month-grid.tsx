@@ -231,11 +231,11 @@ export function MobileMonthGrid({
                       const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
                       const colors = eventColorsByDate?.get(dateKey);
                       if (colors && colors.length > 0) {
-                        const uniqueColors = [...new Set(colors)];
+                        const uniqueColors = [...new Set(colors)].slice(0, 3);
                         return uniqueColors.map((color, i) => (
                           <div
                             key={i}
-                            className="h-1.5 w-1.5 rounded-full"
+                            className="h-2 w-2 rounded-full ring-1 ring-black/15 dark:ring-white/30"
                             style={{ backgroundColor: color }}
                           />
                         ));
@@ -243,7 +243,7 @@ export function MobileMonthGrid({
                       return Array.from({ length: count }).map((_, i) => (
                         <div
                           key={i}
-                          className="bg-primary/80 h-1.5 w-1.5 rounded-full"
+                          className="bg-primary/80 h-2 w-2 rounded-full ring-1 ring-black/10 dark:ring-white/20"
                         />
                       ));
                     })()}

@@ -1,6 +1,13 @@
 import type { Route } from "./+types/list";
 
-import { MailIcon, SearchIcon, UserPlusIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  Clock3Icon,
+  MailIcon,
+  PhoneIcon,
+  SearchIcon,
+  UserPlusIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useFetcher, useNavigate, useSearchParams } from "react-router";
 
@@ -83,9 +90,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 const stateLabels: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" }
+  { label: string; variant: "success" | "secondary" | "destructive" }
 > = {
-  NORMAL: { label: "정상", variant: "default" },
+  NORMAL: { label: "정상", variant: "success" },
   GRADUATE: { label: "졸업", variant: "secondary" },
   DELETED: { label: "탈퇴", variant: "destructive" },
 };
@@ -95,6 +102,18 @@ const typeLabels: Record<string, string> = {
   DROPPER: "재수생",
   ADULT: "성인",
 };
+
+function formatPhoneNumber(value: string | null) {
+  if (!value) return "연락처 없음";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+  }
+  if (digits.length === 10) {
+    return digits.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
+  }
+  return value;
+}
 
 export default function StudentListScreen({
   loaderData,
@@ -148,69 +167,160 @@ export default function StudentListScreen({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold md:text-2xl">수강생 관리</h1>
-          <p className="text-muted-foreground hidden md:block">
+          <p className="text-muted-foreground mt-0.5 text-sm">
             총 {totalCount}명의 수강생이 등록되어 있습니다.
           </p>
         </div>
-        <Button className="min-h-11" asChild>
+        <Button
+          className="min-h-11 shrink-0 rounded-full px-4 shadow-sm"
+          asChild
+        >
           <Link to="/admin/students/new">
-            <UserPlusIcon className="mr-2 h-4 w-4" />
+            <UserPlusIcon className="mr-1.5 h-4 w-4" />
             <span>수강생 등록</span>
           </Link>
         </Button>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <form onSubmit={handleSearch} className="flex gap-2 md:flex-1">
+          <div className="relative min-w-0 flex-1 md:max-w-72">
             <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               name="search"
               placeholder="이름 또는 전화번호 검색"
               defaultValue={searchParams.get("search") || ""}
-              className="w-full pl-9 sm:w-64"
+              className="h-11 w-full pl-9 md:h-9"
             />
           </div>
-          <Button type="submit" variant="secondary">
+          <Button
+            type="submit"
+            variant="secondary"
+            className="min-h-11 md:min-h-9"
+          >
             검색
           </Button>
         </form>
 
-        <Select
-          value={searchParams.get("state") || "all"}
-          onValueChange={handleStateFilter}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="상태" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 상태</SelectItem>
-            <SelectItem value="NORMAL">정상</SelectItem>
-            <SelectItem value="GRADUATE">졸업</SelectItem>
-            <SelectItem value="DELETED">탈퇴</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-2 gap-2 md:flex">
+          <Select
+            value={searchParams.get("state") || "all"}
+            onValueChange={handleStateFilter}
+          >
+            <SelectTrigger className="h-11 w-full md:h-9 md:w-32">
+              <SelectValue placeholder="상태" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 상태</SelectItem>
+              <SelectItem value="NORMAL">정상</SelectItem>
+              <SelectItem value="GRADUATE">졸업</SelectItem>
+              <SelectItem value="DELETED">탈퇴</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={searchParams.get("type") || "all"}
-          onValueChange={handleTypeFilter}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="유형" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 유형</SelectItem>
-            <SelectItem value="EXAMINEE">입시생</SelectItem>
-            <SelectItem value="DROPPER">재수생</SelectItem>
-            <SelectItem value="ADULT">성인</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={searchParams.get("type") || "all"}
+            onValueChange={handleTypeFilter}
+          >
+            <SelectTrigger className="h-11 w-full md:h-9 md:w-32">
+              <SelectValue placeholder="유형" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 유형</SelectItem>
+              <SelectItem value="EXAMINEE">입시생</SelectItem>
+              <SelectItem value="DROPPER">재수생</SelectItem>
+              <SelectItem value="ADULT">성인</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-md border">
+      <div className="space-y-3 md:hidden">
+        {students.length === 0 ? (
+          <div className="bg-card text-muted-foreground rounded-xl border py-12 text-center text-sm">
+            등록된 수강생이 없습니다.
+          </div>
+        ) : (
+          students.map((student) => (
+            <article
+              key={student.profile_id}
+              className="bg-card rounded-xl border p-4 shadow-sm"
+            >
+              <Link
+                to={`/admin/students/${student.profile_id}`}
+                className="group block"
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className="ring-background mt-1 size-3 shrink-0 rounded-full ring-2"
+                    style={{ backgroundColor: student.color || "#EA580C" }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="truncate font-semibold">{student.name}</h2>
+                      <Badge
+                        variant={
+                          stateLabels[student.state]?.variant || "secondary"
+                        }
+                      >
+                        {stateLabels[student.state]?.label || student.state}
+                      </Badge>
+                      {student.type && (
+                        <Badge variant="info">
+                          {typeLabels[student.type] || student.type}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-sm">
+                      <PhoneIcon className="size-3.5" aria-hidden="true" />
+                      <span>{formatPhoneNumber(student.phone)}</span>
+                    </div>
+                    <div className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
+                      <Clock3Icon className="size-3.5" aria-hidden="true" />
+                      <span>
+                        누적{" "}
+                        {Math.round(
+                          (totalHours[student.profile_id] || 0) * 10,
+                        ) / 10}
+                        시간
+                      </span>
+                      {emails[student.profile_id] && (
+                        <span className="truncate">
+                          · {emails[student.profile_id]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRightIcon className="text-muted-foreground mt-2 size-5 shrink-0 transition-transform group-active:translate-x-0.5" />
+                </div>
+              </Link>
+              {student.state === "NORMAL" && (
+                <div className="mt-3 flex justify-end border-t pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground min-h-10"
+                    onClick={() =>
+                      setInviteStudent({
+                        id: student.profile_id,
+                        name: student.name,
+                      })
+                    }
+                  >
+                    <MailIcon className="mr-1.5 size-4" />
+                    초대 메일
+                  </Button>
+                </div>
+              )}
+            </article>
+          ))
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>

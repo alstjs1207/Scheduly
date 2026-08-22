@@ -1,6 +1,6 @@
+import { format, isSameDay } from "date-fns";
 import { useMemo } from "react";
 import { Link } from "react-router";
-import { isSameDay, format } from "date-fns";
 
 interface AdminCalendarEvent {
   id: string;
@@ -33,7 +33,9 @@ export function AdminMobileDayEvents({
   const timeGroups = useMemo(() => {
     const dayEvents = events
       .filter((event) => isSameDay(new Date(event.start), selectedDate))
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      .sort(
+        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+      );
 
     const groups: TimeGroup[] = [];
     for (const event of dayEvents) {
@@ -53,7 +55,7 @@ export function AdminMobileDayEvents({
 
   if (timeGroups.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+      <div className="text-muted-foreground flex flex-col items-center justify-center py-16">
         <p className="text-sm">일정이 없습니다</p>
       </div>
     );
@@ -63,36 +65,37 @@ export function AdminMobileDayEvents({
     <div className="space-y-4 px-4">
       {timeGroups.map((group) => (
         <div key={group.timeLabel}>
-          <p className="text-xs font-medium text-muted-foreground mb-1.5">
+          <p className="text-muted-foreground mb-1.5 text-xs font-medium">
             {group.timeLabel}
           </p>
           <div className="space-y-1.5">
             {group.events.map((event) => {
-              const scheduleId = event.extendedProps?.scheduleId ?? Number(event.id);
-              const studentColor = event.extendedProps?.studentColor ?? "#3B82F6";
+              const scheduleId =
+                event.extendedProps?.scheduleId ?? Number(event.id);
+              const studentColor =
+                event.extendedProps?.studentColor ?? "#3B82F6";
               const programName = event.extendedProps?.programName;
-              const studentName = event.extendedProps?.studentName ?? event.title;
+              const studentName =
+                event.extendedProps?.studentName ?? event.title;
               const studentRegion = event.extendedProps?.studentRegion;
 
               return (
                 <Link
                   key={event.id}
                   to={`/admin/schedules/${scheduleId}/edit`}
-                  className="block w-full text-left rounded-lg border p-3 active:bg-accent transition-colors"
+                  className="bg-card active:bg-accent block w-full rounded-xl border p-3 text-left shadow-sm transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/15 dark:ring-white/30"
                       style={{ backgroundColor: studentColor }}
                     />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {studentName}{studentRegion ? ` (${studentRegion})` : ""}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {studentName}
+                        {studentRegion ? ` (${studentRegion})` : ""}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {format(new Date(event.start), "HH:mm")} - {format(new Date(event.end), "HH:mm")}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 text-xs">
                         {programName || "미지정"}
                       </p>
                     </div>

@@ -71,6 +71,7 @@ export default function ScheduleForm({
     defaultValues?.start_time || "",
   );
   const [studentQuery, setStudentQuery] = useState("");
+  const [hasTouchedStudents, setHasTouchedStudents] = useState(false);
 
   const allSelected =
     students.length > 0 && selectedStudents.size === students.length;
@@ -81,6 +82,7 @@ export default function ScheduleForm({
   );
 
   function toggleStudent(id: string) {
+    setHasTouchedStudents(true);
     setSelectedStudents((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -90,6 +92,7 @@ export default function ScheduleForm({
   }
 
   function toggleAll() {
+    setHasTouchedStudents(true);
     if (allSelected) {
       setSelectedStudents(new Set());
     } else {
@@ -159,7 +162,7 @@ export default function ScheduleForm({
                     className="flex min-h-11 items-center gap-1.5 md:min-h-8"
                   >
                     <div
-                      className="h-2.5 w-2.5 rounded-full"
+                      className="h-2.5 w-2.5 rounded-full ring-1 ring-black/15 dark:ring-white/30"
                       style={{ backgroundColor: student.color || "#3B82F6" }}
                     />
                     {student.name}
@@ -172,8 +175,16 @@ export default function ScheduleForm({
                 </p>
               )}
               {selectedStudents.size === 0 && (
-                <p className="text-destructive text-xs">
-                  수강생을 1명 이상 선택해주세요.
+                <p
+                  className={
+                    hasTouchedStudents
+                      ? "text-destructive text-xs"
+                      : "text-muted-foreground text-xs"
+                  }
+                >
+                  {hasTouchedStudents
+                    ? "수강생을 1명 이상 선택해주세요."
+                    : "일정을 등록할 수강생을 선택하세요."}
                 </p>
               )}
               {Array.from(selectedStudents).map((id) => (

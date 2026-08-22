@@ -156,6 +156,13 @@ export function AdminMobileCalendar({
           eventColorsByDate={eventColorsByDate}
           disableDateRestrictions
         />
+        <div className="text-muted-foreground flex items-center justify-between px-5 pt-2 text-[0.6875rem]">
+          <span className="flex items-center gap-1.5">
+            <span className="bg-primary size-2 rounded-full ring-1 ring-black/10 dark:ring-white/20" />
+            색상 점은 수강생별 일정입니다
+          </span>
+          <span>날짜를 눌러 확인</span>
+        </div>
       </div>
 
       {/* Scrollable event list */}
@@ -177,9 +184,10 @@ export function AdminMobileCalendar({
       <Link
         to={`/admin/schedules/new?date=${selectedDateStr}`}
         aria-label={`${format(selectedDate, "M월 d일", { locale: ko })} 일정 등록`}
-        className="bg-primary text-primary-foreground fixed right-5 bottom-20 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 md:right-6 md:bottom-6"
+        className="bg-primary text-primary-foreground shadow-primary/25 fixed right-5 bottom-20 z-20 flex h-14 items-center justify-center gap-2 rounded-full px-5 font-semibold shadow-lg transition-transform active:scale-95 md:right-6 md:bottom-6"
       >
         <PlusIcon className="h-6 w-6" />
+        <span>일정 등록</span>
       </Link>
     </div>
   );

@@ -1,6 +1,11 @@
 import type { Route } from "./+types/list";
 
-import { FileTextIcon, MailIcon, SmartphoneIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  FileTextIcon,
+  MailIcon,
+  SmartphoneIcon,
+} from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { Badge } from "~/core/components/ui/badge";
@@ -66,9 +71,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 const typeLabels: Record<
   string,
-  { label: string; variant: "default" | "secondary" }
+  { label: string; variant: "info" | "secondary" }
 > = {
-  ALIMTALK: { label: "알림톡", variant: "default" },
+  ALIMTALK: { label: "알림톡", variant: "info" },
   CONSULT_REQUEST: { label: "상담 신청", variant: "secondary" },
 };
 
@@ -76,11 +81,11 @@ const alimtalkStatusLabels: Record<
   string,
   {
     label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
+    variant: "success" | "warning" | "destructive" | "secondary";
   }
 > = {
-  PENDING: { label: "대기", variant: "outline" },
-  SENT: { label: "완료", variant: "default" },
+  PENDING: { label: "대기", variant: "warning" },
+  SENT: { label: "완료", variant: "success" },
   FAILED: { label: "실패", variant: "destructive" },
 };
 
@@ -88,11 +93,11 @@ const emailStatusLabels: Record<
   string,
   {
     label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
+    variant: "success" | "warning" | "destructive" | "secondary";
   }
 > = {
-  PENDING: { label: "대기", variant: "outline" },
-  SENT: { label: "완료", variant: "default" },
+  PENDING: { label: "대기", variant: "warning" },
+  SENT: { label: "완료", variant: "success" },
   FAILED: { label: "실패", variant: "destructive" },
   SKIPPED: { label: "건너뜀", variant: "secondary" },
 };
@@ -101,20 +106,32 @@ const consultStatusLabels: Record<
   string,
   {
     label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
+    variant: "success" | "warning";
   }
 > = {
-  WAITING: { label: "상담 대기", variant: "outline" },
-  COMPLETED: { label: "상담 완료", variant: "default" },
+  WAITING: { label: "상담 대기", variant: "warning" },
+  COMPLETED: { label: "상담 완료", variant: "success" },
 };
 
 const consultResultLabels: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" }
+  { label: string; variant: "success" | "secondary" | "destructive" }
 > = {
-  SUCCESS: { label: "등록 성공", variant: "default" },
+  SUCCESS: { label: "등록 성공", variant: "success" },
   FAILED: { label: "등록 실패", variant: "destructive" },
 };
+
+function formatPhoneNumber(value: string | null) {
+  if (!value) return null;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+  }
+  if (digits.length === 10) {
+    return digits.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
+  }
+  return value;
+}
 
 export default function NotificationListScreen({
   loaderData,
@@ -232,7 +249,7 @@ export default function NotificationListScreen({
         : null;
 
       return (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {alimtalkStatus && (
             <Badge variant={alimtalkStatus.variant} className="text-xs">
               알림톡: {alimtalkStatus.label}
@@ -257,27 +274,34 @@ export default function NotificationListScreen({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">알림 관리</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl font-bold md:text-2xl">알림 관리</h1>
+          <p className="text-muted-foreground mt-0.5 text-sm">
             총 {totalCount}건의 알림 이력이 있습니다.
           </p>
         </div>
-        <Button asChild variant="outline">
+        <Button
+          asChild
+          variant="outline"
+          className="min-h-11 shrink-0 rounded-full px-4"
+        >
           <Link to="/admin/notifications/templates">
-            <FileTextIcon className="mr-2 h-4 w-4" />
-            템플릿 설정
+            <FileTextIcon className="mr-1.5 h-4 w-4" />
+            <span className="md:hidden">템플릿</span>
+            <span className="hidden md:inline">템플릿 설정</span>
           </Link>
         </Button>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="grid grid-cols-2 gap-2 md:flex md:items-center">
         <Select
           value={searchParams.get("type") || "all"}
           onValueChange={handleTypeFilter}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger
+            className={`h-11 w-full md:h-9 md:w-40 ${currentTypeFilter ? "" : "col-span-2"}`}
+          >
             <SelectValue placeholder="유형" />
           </SelectTrigger>
           <SelectContent>
@@ -292,7 +316,7 @@ export default function NotificationListScreen({
             value={searchParams.get("status") || "all"}
             onValueChange={handleStatusFilter}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="h-11 w-full md:h-9 md:w-40">
               <SelectValue placeholder="상태" />
             </SelectTrigger>
             <SelectContent>
@@ -309,7 +333,7 @@ export default function NotificationListScreen({
             value={searchParams.get("status") || "all"}
             onValueChange={handleStatusFilter}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="h-11 w-full md:h-9 md:w-40">
               <SelectValue placeholder="상태" />
             </SelectTrigger>
             <SelectContent>
@@ -331,41 +355,46 @@ export default function NotificationListScreen({
             <Link
               key={notification.notification_id}
               to={`/admin/notifications/${notification.notification_id}`}
-              className="active:bg-accent block rounded-lg border p-4"
+              className="bg-card active:bg-accent block rounded-xl border p-4 shadow-sm transition-colors"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <Badge
                   variant={typeLabels[notification.type]?.variant || "default"}
                 >
                   {typeLabels[notification.type]?.label || notification.type}
                 </Badge>
-                {getStatusBadge(notification)}
+                <time className="text-muted-foreground text-xs">
+                  {new Date(notification.created_at).toLocaleString("ko-KR", {
+                    month: "numeric",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
               </div>
-              <div className="mt-3">
-                <p className="font-semibold">
-                  {notification.recipient_name || "수신자 미지정"}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {notification.recipient_phone ||
-                    notification.recipient_email ||
-                    "연락처 없음"}
-                </p>
+              <div className="mt-2 flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">
+                    {notification.recipient_name || "수신자 미지정"}
+                  </p>
+                  <p className="text-muted-foreground truncate text-sm">
+                    {formatPhoneNumber(notification.recipient_phone) ||
+                      notification.recipient_email ||
+                      "연락처 없음"}
+                  </p>
+                </div>
+                <ChevronRightIcon className="text-muted-foreground mt-1 size-5 shrink-0" />
               </div>
-              <p className="mt-3 line-clamp-2 text-sm">
+              <p className="mt-2 line-clamp-1 text-sm">
                 {notification.type === "ALIMTALK"
                   ? notification.template_name ||
                     notification.alimtalk_template_code ||
                     "알림톡"
                   : notification.consult_message || "상담 내용 없음"}
               </p>
-              <p className="text-muted-foreground mt-3 text-xs">
-                {new Date(notification.created_at).toLocaleString("ko-KR", {
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
+              <div className="mt-3 border-t pt-3">
+                {getStatusBadge(notification)}
+              </div>
             </Link>
           ))
         )}
@@ -421,7 +450,7 @@ export default function NotificationListScreen({
                         {notification.recipient_name || "-"}
                       </div>
                       <div className="text-muted-foreground text-sm">
-                        {notification.recipient_phone}
+                        {formatPhoneNumber(notification.recipient_phone)}
                       </div>
                       {notification.recipient_email && (
                         <div className="text-muted-foreground text-xs">
