@@ -26,7 +26,6 @@ export default function AdminMobileNav() {
           key={item.to}
           to={item.to}
           end={item.end}
-          prefetch="viewport"
           className="min-h-14"
         >
           {({ isActive }) => (
