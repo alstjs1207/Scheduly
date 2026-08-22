@@ -1,9 +1,10 @@
-import type { Route } from "./+types/calendar";
 import type { DatesSetArg } from "@fullcalendar/core";
 
+import type { Route } from "./+types/calendar";
+
+import { ListIcon, PlusIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { ListIcon, PlusIcon, XIcon } from "lucide-react";
 
 import { Button } from "~/core/components/ui/button";
 import { useIsMobile } from "~/core/hooks/use-mobile";
@@ -20,10 +21,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const url = new URL(request.url);
   const now = new Date();
-  const year = parseInt(url.searchParams.get("year") || String(now.getFullYear()));
-  const month = parseInt(url.searchParams.get("month") || String(now.getMonth() + 1));
+  const year = parseInt(
+    url.searchParams.get("year") || String(now.getFullYear()),
+  );
+  const month = parseInt(
+    url.searchParams.get("month") || String(now.getMonth() + 1),
+  );
 
-  const schedules = await getMonthlySchedules(client, { organizationId, year, month });
+  const schedules = await getMonthlySchedules(client, {
+    organizationId,
+    year,
+    month,
+  });
 
   // Transform schedules to calendar events
   const events = schedules.map((schedule) => {
@@ -86,23 +95,31 @@ function DaySchedulePanel({
   });
 
   const sorted = [...events].sort(
-    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
   );
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm flex flex-col overflow-hidden" style={{ maxHeight: "calc(100vh - 220px)" }}>
+    <div
+      className="bg-card flex flex-col overflow-hidden rounded-xl border shadow-sm"
+      style={{ maxHeight: "calc(100vh - 220px)" }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+      <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
         <div>
-          <p className="font-semibold text-sm">{dateLabel}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-sm font-semibold">{dateLabel}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
             {sorted.length > 0 ? `${sorted.length}개 일정` : "일정 없음"}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <Button size="sm" variant="outline" className="h-7 text-xs px-2.5" asChild>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2.5 text-xs"
+            asChild
+          >
             <Link to={`/admin/schedules/new?date=${dateStr}`}>
-              <PlusIcon className="h-3 w-3 mr-1" />
+              <PlusIcon className="mr-1 h-3 w-3" />
               등록
             </Link>
           </Button>
@@ -120,11 +137,11 @@ function DaySchedulePanel({
       {/* Event list */}
       <div className="flex-1 overflow-y-auto">
         {sorted.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <p className="text-sm text-muted-foreground">일정이 없습니다</p>
+          <div className="flex flex-col items-center justify-center gap-2 py-12">
+            <p className="text-muted-foreground text-sm">일정이 없습니다</p>
             <Link
               to={`/admin/schedules/new?date=${dateStr}`}
-              className="text-xs text-primary hover:underline"
+              className="text-primary text-xs hover:underline"
             >
               일정 등록하기 →
             </Link>
@@ -144,24 +161,26 @@ function DaySchedulePanel({
                 <button
                   key={event.id}
                   type="button"
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left cursor-pointer"
+                  className="hover:bg-muted/50 flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors"
                   onClick={() =>
-                    navigate(`/admin/schedules/${event.extendedProps.scheduleId}/edit`)
+                    navigate(
+                      `/admin/schedules/${event.extendedProps.scheduleId}/edit`,
+                    )
                   }
                 >
                   <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-xs text-muted-foreground w-10 shrink-0 tabular-nums">
+                  <span className="text-muted-foreground w-10 shrink-0 text-xs tabular-nums">
                     {timeStr}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
                       {event.extendedProps.studentName}
                     </p>
                     {event.extendedProps.programName && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-muted-foreground truncate text-xs">
                         {event.extendedProps.programName}
                       </p>
                     )}
@@ -189,8 +208,8 @@ export default function ScheduleCalendarScreen({
     const newYear = viewStart.getFullYear();
     const newMonth = viewStart.getMonth() + 1;
 
-    const currentYear = parseInt(searchParams.get("year") || "0");
-    const currentMonth = parseInt(searchParams.get("month") || "0");
+    const currentYear = parseInt(searchParams.get("year") || String(year));
+    const currentMonth = parseInt(searchParams.get("month") || String(month));
 
     if (newYear !== currentYear || newMonth !== currentMonth) {
       setSearchParams({ year: String(newYear), month: String(newMonth) });
@@ -210,17 +229,17 @@ export default function ScheduleCalendarScreen({
     : [];
 
   if (isMobile) {
-    return (
-      <AdminMobileCalendar events={events} year={year} month={month} />
-    );
+    return <AdminMobileCalendar events={events} year={year} month={month} />;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">일정 관리</h1>
-          <p className="hidden md:block text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold tracking-tight md:text-2xl">
+            일정 관리
+          </h1>
+          <p className="text-muted-foreground hidden text-sm md:block">
             수강생들의 수업 일정을 관리합니다.
           </p>
         </div>
@@ -241,14 +260,10 @@ export default function ScheduleCalendarScreen({
       </div>
 
       <div
-        className={
-          selectedDate
-            ? "grid gap-6 items-start"
-            : ""
-        }
+        className={selectedDate ? "grid items-start gap-6" : ""}
         style={selectedDate ? { gridTemplateColumns: "1fr 300px" } : undefined}
       >
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="bg-card rounded-xl border p-6 shadow-sm">
           <AdminCalendar
             events={events}
             onDatesSet={handleDatesSet}

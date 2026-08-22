@@ -1,3 +1,5 @@
+import type { ShouldRevalidateFunctionArgs } from "react-router";
+
 import type { Route } from "./+types/admin.layout";
 
 import { Outlet, redirect } from "react-router";
@@ -50,6 +52,23 @@ export async function loader({ request }: Route.LoaderArgs) {
     organizationName: organization?.name ?? "조직",
     notificationsEnabled,
   };
+}
+
+export function shouldRevalidate({
+  currentUrl,
+  nextUrl,
+  formMethod,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  const isAdminNavigation =
+    currentUrl.pathname.startsWith("/admin") &&
+    nextUrl.pathname.startsWith("/admin");
+
+  if (isAdminNavigation && (!formMethod || formMethod === "GET")) {
+    return false;
+  }
+
+  return defaultShouldRevalidate;
 }
 
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {

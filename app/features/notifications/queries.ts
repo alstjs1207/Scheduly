@@ -4,7 +4,6 @@
  * This file contains functions for notification-specific queries.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-
 import type { Database } from "database.types";
 
 type NotificationType = "ALIMTALK" | "CONSULT_REQUEST";
@@ -45,34 +44,42 @@ export async function getNotificationsPaginated(
   }
 
   if (statusFilter) {
-    if (statusFilter === "PENDING" || statusFilter === "SENT" || statusFilter === "FAILED") {
+    if (
+      statusFilter === "PENDING" ||
+      statusFilter === "SENT" ||
+      statusFilter === "FAILED"
+    ) {
       query = query.eq("alimtalk_status", statusFilter);
     } else {
       query = query.eq("consult_status", statusFilter);
     }
   }
 
-  const { data, error, count } = await query;
+  const [
+    { data, error, count },
+    { data: superTemplates, error: templateError },
+  ] = await Promise.all([
+    query,
+    client.from("super_templates").select("kakao_template_code, name"),
+  ]);
 
   if (error) {
     throw error;
   }
-
-  // super_templates 조회하여 템플릿 코드 → 이름 매핑 생성
-  const { data: superTemplates } = await client
-    .from("super_templates")
-    .select("kakao_template_code, name");
+  if (templateError) {
+    throw templateError;
+  }
 
   const templateNameMap = new Map(
-    superTemplates?.map((t) => [t.kakao_template_code, t.name]) ?? []
+    superTemplates?.map((t) => [t.kakao_template_code, t.name]) ?? [],
   );
 
   // notifications에 template_name 추가
   const notificationsWithTemplateName = (data ?? []).map((notification) => ({
     ...notification,
     template_name: notification.alimtalk_template_code
-      ? templateNameMap.get(notification.alimtalk_template_code) ??
-        notification.alimtalk_template_code
+      ? (templateNameMap.get(notification.alimtalk_template_code) ??
+        notification.alimtalk_template_code)
       : null,
   }));
 
@@ -191,7 +198,7 @@ export async function getTemplatesWithOrgSettings(
   // Merge templates with organization settings
   const templates = superTemplates?.map((superTemplate) => {
     const orgTemplate = orgTemplates?.find(
-      (ot) => ot.super_template_id === superTemplate.super_template_id
+      (ot) => ot.super_template_id === superTemplate.super_template_id,
     );
 
     return {
@@ -283,10 +290,7 @@ export async function upsertOrgTemplate(
  */
 export async function getTodayTestSendCount(
   client: SupabaseClient<Database>,
-  {
-    organizationId,
-    profileId,
-  }: { organizationId: string; profileId: string },
+  { organizationId, profileId }: { organizationId: string; profileId: string },
 ) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

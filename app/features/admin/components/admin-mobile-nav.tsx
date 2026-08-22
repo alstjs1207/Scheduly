@@ -22,7 +22,13 @@ export default function AdminMobileNav() {
       className="bg-background/95 fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-4 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       {items.map((item) => (
-        <NavLink key={item.to} to={item.to} end={item.end} className="min-h-14">
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.end}
+          prefetch="viewport"
+          className="min-h-14"
+        >
           {({ isActive }) => (
             <span
               className={cn(
