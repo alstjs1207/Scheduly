@@ -1,17 +1,18 @@
-import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
   addDays,
+  endOfMonth,
+  endOfWeek,
+  format,
   isBefore,
   isSameDay,
   isSameMonth,
   isToday,
   startOfDay,
-  format,
+  startOfMonth,
+  startOfWeek,
 } from "date-fns";
+import { useCallback, useMemo, useRef, useState } from "react";
+
 import { cn } from "~/core/lib/utils";
 import { canStudentRegisterSchedule } from "~/features/schedules/utils/student-schedule-rules";
 
@@ -154,7 +155,7 @@ export function MobileMonthGrid({
         }}
       >
         {/* Day labels */}
-        <div className="grid grid-cols-7 text-center text-[0.6875rem] font-medium tracking-wider text-muted-foreground mb-1 px-2">
+        <div className="text-muted-foreground mb-1 grid grid-cols-7 px-2 text-center text-[0.6875rem] font-medium tracking-wider">
           {DAY_LABELS.map((label, i) => (
             <div
               key={label}
@@ -187,33 +188,54 @@ export function MobileMonthGrid({
               <button
                 key={date.toISOString()}
                 type="button"
-                className="flex flex-col items-center py-1.5 gap-0.5"
+                aria-label={`${format(date, "yyyy년 M월 d일")}${count > 0 ? `, 일정 ${count}건` : ""}`}
+                aria-pressed={selected}
+                className="flex min-h-12 flex-col items-center gap-0.5 py-1.5"
                 onClick={() => onDateSelect(date)}
               >
                 <div
                   className={cn(
-                    "w-9 h-9 flex items-center justify-center rounded-full text-sm transition-all duration-200",
+                    "flex h-9 w-9 items-center justify-center rounded-full text-sm transition-all duration-200",
                     disabled && !selected && "text-muted-foreground/40",
-                    inMonth && selected && "bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/25",
-                    inMonth && !selected && today && "ring-2 ring-primary font-semibold",
-                    inMonth && !selected && !today && !disabled && "hover:bg-muted active:bg-muted",
-                    inMonth && !selected && !today && !disabled && isSun && "text-red-400",
-                    inMonth && !selected && !today && !disabled && isSat && "text-blue-400",
+                    inMonth &&
+                      selected &&
+                      "bg-primary text-primary-foreground shadow-primary/25 font-semibold shadow-sm",
+                    inMonth &&
+                      !selected &&
+                      today &&
+                      "ring-primary font-semibold ring-2",
+                    inMonth &&
+                      !selected &&
+                      !today &&
+                      !disabled &&
+                      "hover:bg-muted active:bg-muted",
+                    inMonth &&
+                      !selected &&
+                      !today &&
+                      !disabled &&
+                      isSun &&
+                      "text-red-400",
+                    inMonth &&
+                      !selected &&
+                      !today &&
+                      !disabled &&
+                      isSat &&
+                      "text-blue-400",
                   )}
                 >
                   {format(date, "d")}
                 </div>
-                <div className="flex flex-wrap justify-center gap-0.5 min-h-1">
+                <div className="flex min-h-1 flex-wrap justify-center gap-0.5">
                   {inMonth &&
                     (() => {
                       const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
                       const colors = eventColorsByDate?.get(dateKey);
                       if (colors && colors.length > 0) {
-                        const uniqueColors = [...new Set(colors)];
+                        const uniqueColors = [...new Set(colors)].slice(0, 3);
                         return uniqueColors.map((color, i) => (
                           <div
                             key={i}
-                            className="w-1.5 h-1.5 rounded-full"
+                            className="h-2 w-2 rounded-full ring-1 ring-black/15 dark:ring-white/30"
                             style={{ backgroundColor: color }}
                           />
                         ));
@@ -221,7 +243,7 @@ export function MobileMonthGrid({
                       return Array.from({ length: count }).map((_, i) => (
                         <div
                           key={i}
-                          className="w-1.5 h-1.5 rounded-full bg-primary/80"
+                          className="bg-primary/80 h-2 w-2 rounded-full ring-1 ring-black/10 dark:ring-white/20"
                         />
                       ));
                     })()}

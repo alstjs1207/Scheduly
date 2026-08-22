@@ -5,7 +5,6 @@
  * Uses organization_members junction table for role/state information.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-
 import type { Database } from "database.types";
 
 import { fromKST, nowKST } from "~/features/schedules/utils/kst";
@@ -116,10 +115,7 @@ export async function getStudentsPaginated(
  */
 export async function getStudentById(
   client: SupabaseClient<Database>,
-  {
-    organizationId,
-    studentId,
-  }: { organizationId: string; studentId: string },
+  { organizationId, studentId }: { organizationId: string; studentId: string },
 ) {
   const { data: member, error: memberError } = await client
     .from("organization_members")
@@ -238,10 +234,7 @@ export async function updateStudent(
  */
 export async function graduateStudent(
   client: SupabaseClient<Database>,
-  {
-    organizationId,
-    studentId,
-  }: { organizationId: string; studentId: string },
+  { organizationId, studentId }: { organizationId: string; studentId: string },
 ) {
   const { data, error } = await client
     .from("organization_members")
@@ -264,10 +257,7 @@ export async function graduateStudent(
  */
 export async function deleteStudent(
   client: SupabaseClient<Database>,
-  {
-    organizationId,
-    studentId,
-  }: { organizationId: string; studentId: string },
+  { organizationId, studentId }: { organizationId: string; studentId: string },
 ) {
   const { data, error } = await client
     .from("organization_members")
@@ -333,17 +323,29 @@ export async function getStudentEmails(
 ): Promise<Record<string, string>> {
   if (studentIds.length === 0) return {};
 
-  const results = await Promise.all(
-    studentIds.map(async (id) => {
-      const { data } = await adminClient.auth.admin.getUserById(id);
-      return { id, email: data.user?.email };
-    }),
-  );
-
   const emailMap: Record<string, string> = {};
-  for (const { id, email } of results) {
-    if (email) emailMap[id] = email;
+  const remainingIds = new Set(studentIds);
+  const perPage = 1000;
+  let page = 1;
+
+  while (remainingIds.size > 0) {
+    const { data, error } = await adminClient.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) break;
+
+    for (const user of data.users) {
+      if (!remainingIds.has(user.id)) continue;
+      if (user.email) emailMap[user.id] = user.email;
+      remainingIds.delete(user.id);
+    }
+
+    if (data.users.length < perPage) break;
+    page += 1;
   }
+
   return emailMap;
 }
 

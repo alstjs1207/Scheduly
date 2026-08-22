@@ -32,6 +32,11 @@ export interface SuperAdminUser {
   isSuperAdmin: true;
 }
 
+const adminRoleCache = new WeakMap<
+  SupabaseClient<Database>,
+  Map<string, Promise<AdminUser>>
+>();
+
 /**
  * Require admin role for a route or action
  *
@@ -45,7 +50,26 @@ export interface SuperAdminUser {
  * @throws {Response} Redirect to org setup if admin has no organization
  * @returns {AdminUser} The authenticated user and their organization ID
  */
-export async function requireAdminRole(
+export function requireAdminRole(
+  client: SupabaseClient<Database>,
+  organizationId?: string,
+): Promise<AdminUser> {
+  let clientCache = adminRoleCache.get(client);
+  if (!clientCache) {
+    clientCache = new Map();
+    adminRoleCache.set(client, clientCache);
+  }
+
+  const cacheKey = organizationId ?? "__default__";
+  const cached = clientCache.get(cacheKey);
+  if (cached) return cached;
+
+  const result = loadAdminRole(client, organizationId);
+  clientCache.set(cacheKey, result);
+  return result;
+}
+
+async function loadAdminRole(
   client: SupabaseClient<Database>,
   organizationId?: string,
 ): Promise<AdminUser> {

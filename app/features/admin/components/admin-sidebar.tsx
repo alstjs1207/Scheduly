@@ -1,13 +1,13 @@
 import {
   BellIcon,
+  BookOpenIcon,
+  BuildingIcon,
+  CalendarDaysIcon,
   CalendarIcon,
   HomeIcon,
   SettingsIcon,
-  UsersIcon,
-  CalendarDaysIcon,
-  BookOpenIcon,
-  BuildingIcon,
   UserIcon,
+  UsersIcon,
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
@@ -121,7 +121,7 @@ export default function AdminSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link to="/admin">
+              <Link to="/admin" prefetch="intent">
                 <img
                   src="/logo/07_app_icon_512.png"
                   alt="Lestly"
@@ -129,7 +129,7 @@ export default function AdminSidebar({
                 />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Lestly</span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="text-muted-foreground truncate text-xs">
                     관리자
                   </span>
                 </div>
@@ -151,7 +151,7 @@ export default function AdminSidebar({
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
+                    <Link to={item.url} prefetch="intent">
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -173,7 +173,7 @@ export default function AdminSidebar({
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
+                    <Link to={item.url} prefetch="intent">
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -221,7 +221,9 @@ export default function AdminSidebar({
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{user.name}</span>
+                      <span className="truncate font-semibold">
+                        {user.name}
+                      </span>
                       <span className="truncate text-xs">{user.email}</span>
                     </div>
                   </div>

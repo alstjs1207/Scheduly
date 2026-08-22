@@ -26,17 +26,17 @@ import {
 
 /**
  * ThemeSwitcher component for toggling between light, dark, and system themes
- * 
+ *
  * This component uses the remix-themes hook to access and modify the current theme.
  * It displays a dropdown menu with options for light, dark, and system themes,
  * with the current theme indicated by the appropriate icon on the trigger button.
- * 
+ *
  * @returns A dropdown menu component for switching themes
  */
 export default function ThemeSwitcher() {
   // Get the current theme, setter function, and metadata from remix-themes
   const [theme, setTheme, metadata] = useTheme();
-  
+
   return (
     <DropdownMenu>
       {/* Dropdown trigger button with current theme icon */}
@@ -45,7 +45,12 @@ export default function ThemeSwitcher() {
         className="cursor-pointer"
         data-testid="theme-switcher" // For testing purposes
       >
-        <Button variant="ghost" size="icon">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-11 md:size-9"
+          aria-label="화면 테마 변경"
+        >
           {/* Conditionally render the appropriate icon based on current theme */}
           {metadata.definedBy === "SYSTEM" ? (
             <MonitorIcon className="size-4" />
@@ -54,9 +59,10 @@ export default function ThemeSwitcher() {
           ) : theme === Theme.DARK ? (
             <MoonIcon className="size-4" />
           ) : null}
+          <span className="sr-only">화면 테마 변경</span>
         </Button>
       </DropdownMenuTrigger>
-      
+
       {/* Dropdown menu with theme options */}
       <DropdownMenuContent align="end">
         {/* Light theme option */}
@@ -64,12 +70,12 @@ export default function ThemeSwitcher() {
           <SunIcon className="size-4" />
           Light
         </DropdownMenuItem>
-        
+
         {/* Dark theme option */}
         <DropdownMenuItem onClick={() => setTheme(Theme.DARK)}>
           <MoonIcon className="size-4" /> Dark
         </DropdownMenuItem>
-        
+
         {/* System theme option (follows OS preference) */}
         <DropdownMenuItem onClick={() => setTheme(null)}>
           <MonitorIcon className="size-4" /> System
