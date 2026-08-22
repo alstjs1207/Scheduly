@@ -1,7 +1,12 @@
 import type { Route } from "./+types/detail";
 
+import {
+  ChevronLeftIcon,
+  EditIcon,
+  ExternalLinkIcon,
+  TrashIcon,
+} from "lucide-react";
 import { Link, useFetcher } from "react-router";
-import { ChevronLeftIcon, EditIcon, ExternalLinkIcon, TrashIcon } from "lucide-react";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
@@ -48,7 +53,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return { program, hasSchedules: programHasSchedules };
 }
 
-const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+const statusLabels: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "outline" }
+> = {
   DRAFT: { label: "초안", variant: "outline" },
   ACTIVE: { label: "활성", variant: "default" },
   ARCHIVED: { label: "보관됨", variant: "secondary" },
@@ -75,7 +83,7 @@ export default function ProgramDetailScreen({
   loaderData,
 }: Route.ComponentProps) {
   const { program, hasSchedules: programHasSchedules } = loaderData;
-  const deleteFetcher = useFetcher();
+  const deleteFetcher = useFetcher<{ success: false; error?: string }>();
 
   return (
     <div className="space-y-6">
@@ -88,13 +96,17 @@ export default function ProgramDetailScreen({
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl md:text-2xl font-bold">{program.title}</h1>
-              <Badge variant={statusLabels[program.status]?.variant || "default"}>
+              <h1 className="text-xl font-bold md:text-2xl">{program.title}</h1>
+              <Badge
+                variant={statusLabels[program.status]?.variant || "default"}
+              >
                 {statusLabels[program.status]?.label || program.status}
               </Badge>
             </div>
             {program.subtitle && (
-              <p className="hidden md:block text-muted-foreground">{program.subtitle}</p>
+              <p className="text-muted-foreground hidden md:block">
+                {program.subtitle}
+              </p>
             )}
           </div>
         </div>
@@ -133,17 +145,26 @@ export default function ProgramDetailScreen({
                 <DialogHeader>
                   <DialogTitle>클래스 삭제</DialogTitle>
                   <DialogDescription>
-                    &quot;{program.title}&quot; 클래스를 삭제하시겠습니까?
-                    이 작업은 되돌릴 수 없습니다.
+                    &quot;{program.title}&quot; 클래스를 삭제하시겠습니까? 이
+                    작업은 되돌릴 수 없습니다.
                   </DialogDescription>
                 </DialogHeader>
+                {deleteFetcher.data?.error && (
+                  <p className="text-destructive text-sm" role="alert">
+                    {deleteFetcher.data.error}
+                  </p>
+                )}
                 <DialogFooter>
                   <deleteFetcher.Form
                     method="post"
                     action={`/api/admin/programs/${program.program_id}/delete`}
                   >
-                    <Button type="submit" variant="destructive">
-                      삭제
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      disabled={deleteFetcher.state !== "idle"}
+                    >
+                      {deleteFetcher.state !== "idle" ? "삭제 중..." : "삭제"}
                     </Button>
                   </deleteFetcher.Form>
                 </DialogFooter>
@@ -159,31 +180,35 @@ export default function ProgramDetailScreen({
             <CardTitle>기본 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <p className="text-sm text-muted-foreground">클래스명</p>
+                <p className="text-muted-foreground text-sm">클래스명</p>
                 <p className="font-medium">{program.title}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">상태</p>
-                <Badge variant={statusLabels[program.status]?.variant || "default"}>
+                <p className="text-muted-foreground text-sm">상태</p>
+                <Badge
+                  variant={statusLabels[program.status]?.variant || "default"}
+                >
                   {statusLabels[program.status]?.label || program.status}
                 </Badge>
               </div>
               {program.subtitle && (
                 <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">부제목</p>
+                  <p className="text-muted-foreground text-sm">부제목</p>
                   <p className="font-medium">{program.subtitle}</p>
                 </div>
               )}
               <div>
-                <p className="text-sm text-muted-foreground">난이도</p>
+                <p className="text-muted-foreground text-sm">난이도</p>
                 <p className="font-medium">
-                  {program.level ? levelLabels[program.level] || program.level : "-"}
+                  {program.level
+                    ? levelLabels[program.level] || program.level
+                    : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">가격</p>
+                <p className="text-muted-foreground text-sm">가격</p>
                 <p className="font-medium">
                   {program.price ? `${program.price.toLocaleString()}원` : "-"}
                 </p>
@@ -191,7 +216,7 @@ export default function ProgramDetailScreen({
             </div>
             {program.description && (
               <div>
-                <p className="text-sm text-muted-foreground">클래스 설명</p>
+                <p className="text-muted-foreground text-sm">클래스 설명</p>
                 <p className="font-medium whitespace-pre-wrap">
                   {program.description}
                 </p>
@@ -206,12 +231,12 @@ export default function ProgramDetailScreen({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">강사명</p>
+              <p className="text-muted-foreground text-sm">강사명</p>
               <p className="font-medium">{program.instructor?.name || "-"}</p>
             </div>
             {program.instructor?.info && (
               <div>
-                <p className="text-sm text-muted-foreground">강사 소개</p>
+                <p className="text-muted-foreground text-sm">강사 소개</p>
                 <p className="font-medium whitespace-pre-wrap">
                   {program.instructor.info}
                 </p>
@@ -228,27 +253,27 @@ export default function ProgramDetailScreen({
             <CardTitle>공개 설정</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <p className="text-sm text-muted-foreground">공개 여부</p>
+                <p className="text-muted-foreground text-sm">공개 여부</p>
                 <Badge variant={program.is_public ? "default" : "outline"}>
                   {program.is_public ? "공개" : "비공개"}
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">공개 URL</p>
+                <p className="text-muted-foreground text-sm">공개 URL</p>
                 {program.slug ? (
                   <a
                     href={`/class/${program.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+                    className="text-primary inline-flex items-center gap-1 font-medium hover:underline"
                   >
                     /class/{program.slug}
                     <ExternalLinkIcon className="h-3 w-3" />
                   </a>
                 ) : (
-                  <p className="font-medium text-muted-foreground">-</p>
+                  <p className="text-muted-foreground font-medium">-</p>
                 )}
               </div>
             </div>
@@ -260,38 +285,44 @@ export default function ProgramDetailScreen({
             <CardTitle>클래스 운영 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <p className="text-sm text-muted-foreground">진행 방식</p>
+                <p className="text-muted-foreground text-sm">진행 방식</p>
                 <p className="font-medium">
-                  {program.location_type ? locationTypeLabels[program.location_type] || program.location_type : "-"}
+                  {program.location_type
+                    ? locationTypeLabels[program.location_type] ||
+                      program.location_type
+                    : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">최대 인원</p>
+                <p className="text-muted-foreground text-sm">최대 인원</p>
                 <p className="font-medium">
                   {program.max_capacity ? `${program.max_capacity}명` : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">수업 시간</p>
+                <p className="text-muted-foreground text-sm">수업 시간</p>
                 <p className="font-medium">
-                  {program.duration_minutes ? `${program.duration_minutes}분` : "-"}
+                  {program.duration_minutes
+                    ? `${program.duration_minutes}분`
+                    : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">총 회차</p>
+                <p className="text-muted-foreground text-sm">총 회차</p>
                 <p className="font-medium">
                   {program.total_sessions ? `${program.total_sessions}회` : "-"}
                 </p>
               </div>
             </div>
-            {program.location_type === "offline" && program.location_address && (
-              <div>
-                <p className="text-sm text-muted-foreground">장소</p>
-                <p className="font-medium">{program.location_address}</p>
-              </div>
-            )}
+            {program.location_type === "offline" &&
+              program.location_address && (
+                <div>
+                  <p className="text-muted-foreground text-sm">장소</p>
+                  <p className="font-medium">{program.location_address}</p>
+                </div>
+              )}
           </CardContent>
         </Card>
       </div>
@@ -306,7 +337,7 @@ export default function ProgramDetailScreen({
             <div className="grid gap-4 md:grid-cols-2">
               {program.thumbnail_url && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">썸네일</p>
+                  <p className="text-muted-foreground mb-2 text-sm">썸네일</p>
                   <img
                     src={program.thumbnail_url}
                     alt="썸네일"
@@ -316,7 +347,9 @@ export default function ProgramDetailScreen({
               )}
               {program.cover_image_url && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">커버 이미지</p>
+                  <p className="text-muted-foreground mb-2 text-sm">
+                    커버 이미지
+                  </p>
                   <img
                     src={program.cover_image_url}
                     alt="커버 이미지"
@@ -330,31 +363,42 @@ export default function ProgramDetailScreen({
       )}
 
       {/* 커리큘럼 */}
-      {program.curriculum && (program.curriculum as unknown as CurriculumItem[]).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>커리큘럼</CardTitle>
-            <CardDescription>총 {(program.curriculum as unknown as CurriculumItem[]).length}개 세션</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {(program.curriculum as unknown as CurriculumItem[]).map((item, index) => (
-                <div key={index} className="flex gap-4 p-3 rounded-lg bg-muted/50">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                    {item.session}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{item.title}</p>
-                    {item.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {program.curriculum &&
+        (program.curriculum as unknown as CurriculumItem[]).length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>커리큘럼</CardTitle>
+              <CardDescription>
+                총 {(program.curriculum as unknown as CurriculumItem[]).length}
+                개 세션
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(program.curriculum as unknown as CurriculumItem[]).map(
+                  (item, index) => (
+                    <div
+                      key={index}
+                      className="bg-muted/50 flex gap-4 rounded-lg p-3"
+                    >
+                      <div className="bg-primary/10 text-primary flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium">
+                        {item.session}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{item.title}</p>
+                        {item.description && (
+                          <p className="text-muted-foreground mt-1 text-sm">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       <Card>
         <CardHeader>
@@ -362,15 +406,15 @@ export default function ProgramDetailScreen({
           <CardDescription>클래스 등록 및 수정 기록</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">등록일</p>
+              <p className="text-muted-foreground text-sm">등록일</p>
               <p className="font-medium">
                 {new Date(program.created_at).toLocaleString("ko-KR")}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">최종 수정일</p>
+              <p className="text-muted-foreground text-sm">최종 수정일</p>
               <p className="font-medium">
                 {new Date(program.updated_at).toLocaleString("ko-KR")}
               </p>

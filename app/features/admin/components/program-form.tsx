@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
-import { useFetcher } from "react-router";
 import { PlusIcon, TrashIcon, UploadIcon, XIcon } from "lucide-react";
+import { useRef, useState } from "react";
+import { useFetcher } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 import { Checkbox } from "~/core/components/ui/checkbox";
@@ -50,19 +50,23 @@ interface ProgramFormProps {
   };
 }
 
-export default function ProgramForm({ mode, instructors = [], defaultValues }: ProgramFormProps) {
-  const fetcher = useFetcher();
+export default function ProgramForm({
+  mode,
+  instructors = [],
+  defaultValues,
+}: ProgramFormProps) {
+  const fetcher = useFetcher<{ error?: string }>();
   const isSubmitting = fetcher.state !== "idle";
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 커리큘럼 동적 필드 상태
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>(
-    defaultValues?.curriculum || []
+    defaultValues?.curriculum || [],
   );
 
   // 커버 이미지 상태
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(
-    defaultValues?.cover_image_url || null
+    defaultValues?.cover_image_url || null,
   );
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
 
@@ -104,7 +108,7 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
   const updateCurriculum = (
     index: number,
     field: keyof CurriculumItem,
-    value: string | number
+    value: string | number,
   ) => {
     const updated = [...curriculum];
     updated[index] = { ...updated[index], [field]: value };
@@ -112,17 +116,38 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
   };
 
   return (
-    <fetcher.Form method="post" action={actionUrl} encType="multipart/form-data" className="space-y-8">
+    <fetcher.Form
+      method="post"
+      action={actionUrl}
+      encType="multipart/form-data"
+      className="space-y-8"
+    >
+      {fetcher.data?.error && (
+        <p
+          className="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border px-4 py-3 text-sm"
+          role="alert"
+        >
+          {fetcher.data.error}
+        </p>
+      )}
       {/* JSONB 필드를 hidden input으로 전송 */}
-      <input type="hidden" name="curriculum" value={JSON.stringify(curriculum)} />
+      <input
+        type="hidden"
+        name="curriculum"
+        value={JSON.stringify(curriculum)}
+      />
       {/* 기존 커버 이미지 URL (수정 모드에서 이미지 변경 없을 때) */}
       {defaultValues?.cover_image_url && !coverImageFile && (
-        <input type="hidden" name="existing_cover_image_url" value={defaultValues.cover_image_url} />
+        <input
+          type="hidden"
+          name="existing_cover_image_url"
+          value={defaultValues.cover_image_url}
+        />
       )}
 
       {/* 기본 정보 섹션 */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold border-b pb-2">기본 정보</h3>
+        <h3 className="border-b pb-2 text-lg font-semibold">기본 정보</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="title">클래스명 *</Label>
@@ -144,13 +169,9 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
               defaultValue={defaultValues?.slug}
               placeholder="calligraphy-beginner"
             />
-            {fetcher.data?.error ? (
-              <p className="text-xs text-destructive">{fetcher.data.error}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                공개 URL: /class/[슬러그]
-              </p>
-            )}
+            <p className="text-muted-foreground text-xs">
+              공개 URL: /class/[슬러그]
+            </p>
           </div>
 
           <div className="space-y-2 md:col-span-2">
@@ -217,7 +238,7 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
             </Select>
           </div>
 
-          <div className="space-y-2 flex items-center gap-2">
+          <div className="flex items-center gap-2 space-y-2">
             <Checkbox
               id="is_public"
               name="is_public"
@@ -232,14 +253,14 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
 
       {/* 커버 이미지 섹션 */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold border-b pb-2">커버 이미지</h3>
+        <h3 className="border-b pb-2 text-lg font-semibold">커버 이미지</h3>
         <div className="space-y-4">
           {coverImagePreview ? (
             <div className="relative inline-block">
               <img
                 src={coverImagePreview}
                 alt="커버 이미지 미리보기"
-                className="max-w-md max-h-64 rounded-lg border object-cover"
+                className="max-h-64 max-w-md rounded-lg border object-cover"
               />
               <Button
                 type="button"
@@ -253,14 +274,14 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
             </div>
           ) : (
             <div
-              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+              className="border-muted-foreground/25 hover:border-muted-foreground/50 cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
-              <UploadIcon className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <p className="mt-2 text-sm text-muted-foreground">
+              <UploadIcon className="text-muted-foreground/50 mx-auto h-12 w-12" />
+              <p className="text-muted-foreground mt-2 text-sm">
                 클릭하여 이미지를 업로드하세요
               </p>
-              <p className="text-xs text-muted-foreground/75">
+              <p className="text-muted-foreground/75 text-xs">
                 JPG, PNG, WebP (최대 5MB)
               </p>
             </div>
@@ -278,7 +299,7 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
 
       {/* 수업 정보 섹션 */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold border-b pb-2">수업 정보</h3>
+        <h3 className="border-b pb-2 text-lg font-semibold">수업 정보</h3>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="location_type">수업 형태</Label>
@@ -358,7 +379,7 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
 
       {/* 클래스 소개 섹션 */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold border-b pb-2">클래스 설명</h3>
+        <h3 className="border-b pb-2 text-lg font-semibold">클래스 설명</h3>
         <div className="space-y-2">
           <Label htmlFor="description">상세 설명</Label>
           <Textarea
@@ -381,20 +402,22 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
             size="sm"
             onClick={addCurriculum}
           >
-            <PlusIcon className="w-4 h-4 mr-1" />
+            <PlusIcon className="mr-1 h-4 w-4" />
             회차 추가
           </Button>
         </div>
         {curriculum.map((item, index) => (
           <div
             key={index}
-            className="grid gap-4 md:grid-cols-4 p-4 border rounded-lg"
+            className="grid gap-4 rounded-lg border p-4 md:grid-cols-4"
           >
             <div className="space-y-2">
               <Label>{item.session}회차</Label>
               <Input
                 value={item.title}
-                onChange={(e) => updateCurriculum(index, "title", e.target.value)}
+                onChange={(e) =>
+                  updateCurriculum(index, "title", e.target.value)
+                }
                 placeholder="회차 제목"
               />
             </div>
@@ -415,7 +438,7 @@ export default function ProgramForm({ mode, instructors = [], defaultValues }: P
                 size="sm"
                 onClick={() => removeCurriculum(index)}
               >
-                <TrashIcon className="w-4 h-4 text-destructive" />
+                <TrashIcon className="text-destructive h-4 w-4" />
               </Button>
             </div>
           </div>

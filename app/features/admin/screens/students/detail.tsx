@@ -143,8 +143,8 @@ export default function StudentDetailScreen({
     nextMonth,
     totalHours,
   } = loaderData;
-  const graduateFetcher = useFetcher();
-  const deleteFetcher = useFetcher();
+  const graduateFetcher = useFetcher<{ success: false; error?: string }>();
+  const deleteFetcher = useFetcher<{ success: false; error?: string }>();
   const inviteFetcher = useFetcher<{
     success: boolean;
     error?: string;
@@ -307,12 +307,24 @@ export default function StudentDetailScreen({
                       수강생은 일정 등록 시 선택할 수 없습니다.
                     </DialogDescription>
                   </DialogHeader>
+                  {graduateFetcher.data?.error && (
+                    <p className="text-destructive text-sm" role="alert">
+                      {graduateFetcher.data.error}
+                    </p>
+                  )}
                   <DialogFooter>
                     <graduateFetcher.Form
                       method="post"
                       action={`/api/admin/students/${student.profile_id}/graduate`}
                     >
-                      <Button type="submit">졸업 처리</Button>
+                      <Button
+                        type="submit"
+                        disabled={graduateFetcher.state !== "idle"}
+                      >
+                        {graduateFetcher.state !== "idle"
+                          ? "처리 중..."
+                          : "졸업 처리"}
+                      </Button>
                     </graduateFetcher.Form>
                   </DialogFooter>
                 </DialogContent>
@@ -333,13 +345,24 @@ export default function StudentDetailScreen({
                       수강생은 관리자 전용 목록에서만 확인할 수 있습니다.
                     </DialogDescription>
                   </DialogHeader>
+                  {deleteFetcher.data?.error && (
+                    <p className="text-destructive text-sm" role="alert">
+                      {deleteFetcher.data.error}
+                    </p>
+                  )}
                   <DialogFooter>
                     <deleteFetcher.Form
                       method="post"
                       action={`/api/admin/students/${student.profile_id}/delete`}
                     >
-                      <Button type="submit" variant="destructive">
-                        탈퇴 처리
+                      <Button
+                        type="submit"
+                        variant="destructive"
+                        disabled={deleteFetcher.state !== "idle"}
+                      >
+                        {deleteFetcher.state !== "idle"
+                          ? "처리 중..."
+                          : "탈퇴 처리"}
                       </Button>
                     </deleteFetcher.Form>
                   </DialogFooter>

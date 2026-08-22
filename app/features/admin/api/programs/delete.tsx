@@ -21,17 +21,31 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   const programId = parseInt(params.programId);
 
-  // Check if program has any schedules
-  const programHasSchedules = await hasSchedules(client, { programId });
+  try {
+    // Check if program has any schedules
+    const programHasSchedules = await hasSchedules(client, { programId });
 
-  if (programHasSchedules) {
+    if (programHasSchedules) {
+      return data(
+        {
+          success: false,
+          error: "스케줄이 존재하는 클래스는 삭제할 수 없습니다.",
+        },
+        { status: 400 },
+      );
+    }
+
+    await deleteProgram(client, { programId });
+  } catch (error) {
+    console.error("Failed to delete program", error);
     return data(
-      { error: "스케줄이 존재하는 클래스는 삭제할 수 없습니다." },
-      { status: 400 }
+      {
+        success: false,
+        error: "클래스를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
     );
   }
-
-  await deleteProgram(client, { programId });
 
   return redirect("/admin/programs");
 }

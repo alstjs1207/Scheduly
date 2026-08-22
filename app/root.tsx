@@ -46,6 +46,7 @@ import i18next from "./core/lib/i18next.server";
 import { themeSessionResolver } from "./core/lib/theme-session.server";
 import { cn } from "./core/lib/utils";
 import NotFound from "./core/screens/404";
+import AppError from "./core/screens/app-error";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico" },
@@ -310,9 +311,10 @@ export default function App() {
  * @param error - The error that was caught by React Router
  */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
+  let status = 500;
+  let title = "서비스를 불러오지 못했습니다";
+  let description = "일시적인 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+  let technicalDetails: string | undefined;
 
   if (isRouteErrorResponse(error)) {
     // Handle route errors (404, 500, etc.)
@@ -320,8 +322,31 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       // Show custom 404 page for "not found" errors
       return <NotFound />;
     }
-    message = "Error";
-    details = error.statusText || details;
+    status = error.status;
+
+    if (error.status === 400) {
+      title = "요청 내용을 확인해 주세요";
+      description =
+        typeof error.data === "string" && error.data
+          ? error.data
+          : "입력하거나 요청한 내용을 확인한 뒤 다시 시도해 주세요.";
+    } else if (error.status === 401) {
+      title = "로그인이 필요합니다";
+      description = "로그인 정보가 만료되었거나 인증되지 않았습니다.";
+    } else if (error.status === 403) {
+      title = "접근 권한이 없습니다";
+      description = "이 페이지를 이용할 권한이 있는지 확인해 주세요.";
+    } else if (error.status === 409) {
+      title = "이미 처리된 정보입니다";
+      description =
+        typeof error.data === "string" && error.data
+          ? error.data
+          : "동일한 정보가 이미 등록되어 있습니다.";
+    } else if (error.status >= 500) {
+      title = "서버에서 요청을 처리하지 못했습니다";
+      description =
+        "입력한 내용은 다시 확인할 수 있도록 유지됩니다. 잠시 후 다시 시도해 주세요.";
+    }
   } else if (error && error instanceof Error) {
     // Handle JavaScript errors
     if (
@@ -332,22 +357,16 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       Sentry.captureException(error);
     }
     if (import.meta.env.DEV) {
-      // Show detailed error information in development
-      details = error.message;
-      stack = error.stack;
+      technicalDetails = error.stack || error.message;
     }
   }
 
-  // Render a simple error page with available information
   return (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full overflow-x-auto p-4">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
+    <AppError
+      status={status}
+      title={title}
+      description={description}
+      technicalDetails={technicalDetails}
+    />
   );
 }

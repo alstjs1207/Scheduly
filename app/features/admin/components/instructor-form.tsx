@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
-import { useFetcher } from "react-router";
 import { PlusIcon, TrashIcon, UploadIcon, XIcon } from "lucide-react";
+import { useRef, useState } from "react";
+import { useFetcher } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 import { Input } from "~/core/components/ui/input";
@@ -19,8 +19,11 @@ interface InstructorFormProps {
   };
 }
 
-export default function InstructorForm({ mode, defaultValues }: InstructorFormProps) {
-  const fetcher = useFetcher();
+export default function InstructorForm({
+  mode,
+  defaultValues,
+}: InstructorFormProps) {
+  const fetcher = useFetcher<{ error?: string }>();
   const isSubmitting = fetcher.state !== "idle";
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,7 +32,7 @@ export default function InstructorForm({ mode, defaultValues }: InstructorFormPr
 
   // 프로필 사진 상태
   const [photoPreview, setPhotoPreview] = useState<string | null>(
-    defaultValues?.photo_url || null
+    defaultValues?.photo_url || null,
   );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -73,16 +76,33 @@ export default function InstructorForm({ mode, defaultValues }: InstructorFormPr
   };
 
   return (
-    <fetcher.Form method="post" action={actionUrl} encType="multipart/form-data" className="space-y-6">
+    <fetcher.Form
+      method="post"
+      action={actionUrl}
+      encType="multipart/form-data"
+      className="space-y-6"
+    >
+      {fetcher.data?.error && (
+        <p
+          className="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border px-4 py-3 text-sm"
+          role="alert"
+        >
+          {fetcher.data.error}
+        </p>
+      )}
       <input type="hidden" name="career" value={JSON.stringify(career)} />
       {/* 기존 프로필 사진 URL (수정 모드에서 이미지 변경 없을 때) */}
       {defaultValues?.photo_url && !photoFile && photoPreview && (
-        <input type="hidden" name="existing_photo_url" value={defaultValues.photo_url} />
+        <input
+          type="hidden"
+          name="existing_photo_url"
+          value={defaultValues.photo_url}
+        />
       )}
 
       {/* 기본 정보 */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold border-b pb-2">기본 정보</h3>
+        <h3 className="border-b pb-2 text-lg font-semibold">기본 정보</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">강사명 *</Label>
@@ -102,7 +122,7 @@ export default function InstructorForm({ mode, defaultValues }: InstructorFormPr
                 <img
                   src={photoPreview}
                   alt="프로필 사진 미리보기"
-                  className="w-32 h-32 rounded-full border object-cover cursor-pointer"
+                  className="h-32 w-32 cursor-pointer rounded-full border object-cover"
                   onClick={() => fileInputRef.current?.click()}
                 />
                 <Button
@@ -117,11 +137,11 @@ export default function InstructorForm({ mode, defaultValues }: InstructorFormPr
               </div>
             ) : (
               <div
-                className="w-32 h-32 border-2 border-dashed border-muted-foreground/25 rounded-full flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                className="border-muted-foreground/25 hover:border-muted-foreground/50 flex h-32 w-32 cursor-pointer flex-col items-center justify-center rounded-full border-2 border-dashed transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <UploadIcon className="h-6 w-6 text-muted-foreground/50" />
-                <p className="mt-1 text-xs text-muted-foreground">업로드</p>
+                <UploadIcon className="text-muted-foreground/50 h-6 w-6" />
+                <p className="text-muted-foreground mt-1 text-xs">업로드</p>
               </div>
             )}
             <input
@@ -152,12 +172,14 @@ export default function InstructorForm({ mode, defaultValues }: InstructorFormPr
         <div className="flex items-center justify-between border-b pb-2">
           <h3 className="text-lg font-semibold">경력</h3>
           <Button type="button" variant="outline" size="sm" onClick={addCareer}>
-            <PlusIcon className="w-4 h-4 mr-1" />
+            <PlusIcon className="mr-1 h-4 w-4" />
             추가
           </Button>
         </div>
         {career.length === 0 ? (
-          <p className="text-sm text-muted-foreground">등록된 경력이 없습니다.</p>
+          <p className="text-muted-foreground text-sm">
+            등록된 경력이 없습니다.
+          </p>
         ) : (
           career.map((item, index) => (
             <div key={index} className="flex gap-2">
@@ -172,7 +194,7 @@ export default function InstructorForm({ mode, defaultValues }: InstructorFormPr
                 size="sm"
                 onClick={() => removeCareer(index)}
               >
-                <TrashIcon className="w-4 h-4 text-destructive" />
+                <TrashIcon className="text-destructive h-4 w-4" />
               </Button>
             </div>
           ))
@@ -181,7 +203,7 @@ export default function InstructorForm({ mode, defaultValues }: InstructorFormPr
 
       {/* SNS */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold border-b pb-2">SNS</h3>
+        <h3 className="border-b pb-2 text-lg font-semibold">SNS</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="sns_instagram">Instagram URL</Label>

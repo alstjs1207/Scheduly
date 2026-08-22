@@ -29,9 +29,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
-export default function OrganizationScreen({ loaderData }: Route.ComponentProps) {
+export default function OrganizationScreen({
+  loaderData,
+}: Route.ComponentProps) {
   const { organization } = loaderData;
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<{ error?: string }>();
   const isSubmitting = fetcher.state !== "idle";
 
   if (!organization) {
@@ -49,20 +51,28 @@ export default function OrganizationScreen({ loaderData }: Route.ComponentProps)
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">조직 정보</h1>
-        <p className="text-muted-foreground">
-          조직의 기본 정보를 관리합니다.
-        </p>
+        <p className="text-muted-foreground">조직의 기본 정보를 관리합니다.</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>기본 정보</CardTitle>
-          <CardDescription>
-            조직의 이름과 설명을 수정합니다.
-          </CardDescription>
+          <CardDescription>조직의 이름과 설명을 수정합니다.</CardDescription>
         </CardHeader>
         <CardContent>
-          <fetcher.Form method="post" action="/api/admin/organization" className="space-y-6">
+          <fetcher.Form
+            method="post"
+            action="/api/admin/organization"
+            className="space-y-6"
+          >
+            {fetcher.data?.error && (
+              <p
+                className="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border px-4 py-3 text-sm"
+                role="alert"
+              >
+                {fetcher.data.error}
+              </p>
+            )}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">조직 이름</Label>

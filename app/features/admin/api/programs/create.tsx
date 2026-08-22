@@ -3,8 +3,9 @@
  *
  * Creates a new program for the organization.
  */
-import type { Route } from "./+types/create";
 import type { Json } from "database.types";
+
+import type { Route } from "./+types/create";
 
 import { data, redirect } from "react-router";
 
@@ -64,7 +65,10 @@ export async function action({ request }: Route.ActionArgs) {
     try {
       curriculum = JSON.parse(curriculumStr);
     } catch {
-      return data({ error: "잘못된 커리큘럼 데이터 형식입니다." }, { status: 400 });
+      return data(
+        { error: "잘못된 커리큘럼 데이터 형식입니다." },
+        { status: 400 },
+      );
     }
   }
 
@@ -72,30 +76,41 @@ export async function action({ request }: Route.ActionArgs) {
   let program;
   try {
     program = await createProgram(client, {
-    organization_id: organizationId,
-    instructor_id: instructorId,
-    title,
-    status,
-    subtitle: subtitle || null,
-    description: description || null,
-    level: level || null,
-    price: price || null,
-    slug: slug || null,
-    cover_image_url: null, // 파일 업로드 후 업데이트
-    location_type: locationType || "offline",
-    location_address: locationAddress || null,
-    duration_minutes: durationMinutes || 120,
-    total_sessions: totalSessions || 4,
-    curriculum,
+      organization_id: organizationId,
+      instructor_id: instructorId,
+      title,
+      status,
+      subtitle: subtitle || null,
+      description: description || null,
+      level: level || null,
+      price: price || null,
+      slug: slug || null,
+      cover_image_url: null, // 파일 업로드 후 업데이트
+      location_type: locationType || "offline",
+      location_address: locationAddress || null,
+      duration_minutes: durationMinutes || 120,
+      total_sessions: totalSessions || 4,
+      curriculum,
       max_capacity: maxCapacity || null,
       is_public: isPublic,
     });
   } catch (err: unknown) {
     const pgError = err as { code?: string };
     if (pgError?.code === "23505") {
-      return data({ error: "이미 사용 중인 URL 슬러그입니다. 다른 슬러그를 입력해주세요." }, { status: 400 });
+      return data(
+        {
+          error: "이미 사용 중인 URL 슬러그입니다. 다른 슬러그를 입력해주세요.",
+        },
+        { status: 400 },
+      );
     }
-    throw err;
+    console.error("Failed to create program", err);
+    return data(
+      {
+        error: "클래스 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
   }
 
   // 커버 이미지 업로드

@@ -1,6 +1,6 @@
 import type { Route } from "./+types/graduate";
 
-import { redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { requireMethod } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
@@ -24,7 +24,14 @@ export async function action({ request, params }: Route.ActionArgs) {
     .eq("role", "STUDENT");
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Failed to graduate student", error);
+    return data(
+      {
+        success: false,
+        error: "수강생을 졸업 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
   }
 
   return redirect("/admin/students");

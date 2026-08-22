@@ -54,7 +54,7 @@ export default function ScheduleEditScreen({
   loaderData,
 }: Route.ComponentProps) {
   const { schedule, students, programs, isPast } = loaderData;
-  const deleteFetcher = useFetcher();
+  const deleteFetcher = useFetcher<{ success: false; error?: string }>();
 
   const startTime = new Date(schedule.start_time);
   const endTime = new Date(schedule.end_time);
@@ -106,6 +106,11 @@ export default function ScheduleEditScreen({
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
+                {deleteFetcher.data?.error && (
+                  <p className="text-destructive text-sm" role="alert">
+                    {deleteFetcher.data.error}
+                  </p>
+                )}
                 <deleteFetcher.Form
                   method="post"
                   action={`/api/admin/schedules/${schedule.schedule_id}/delete`}
@@ -138,8 +143,12 @@ export default function ScheduleEditScreen({
                     )}
                   </div>
                   <DialogFooter className="mt-4">
-                    <Button type="submit" variant="destructive">
-                      삭제
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      disabled={deleteFetcher.state !== "idle"}
+                    >
+                      {deleteFetcher.state !== "idle" ? "삭제 중..." : "삭제"}
                     </Button>
                   </DialogFooter>
                 </deleteFetcher.Form>

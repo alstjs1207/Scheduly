@@ -1,6 +1,12 @@
+import { AlertCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { useFetcher } from "react-router";
 
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "~/core/components/ui/alert";
 import { Button } from "~/core/components/ui/button";
 import { Input } from "~/core/components/ui/input";
 import { Label } from "~/core/components/ui/label";
@@ -33,8 +39,42 @@ interface StudentFormProps {
   };
 }
 
+type StudentFormField =
+  | "name"
+  | "phone"
+  | "email"
+  | "type"
+  | "state"
+  | "region"
+  | "birth_date"
+  | "class_start_date"
+  | "class_end_date"
+  | "color";
+
+type StudentFormActionData = {
+  success: false;
+  error?: string;
+  fieldErrors?: Partial<Record<StudentFormField, string[]>>;
+};
+
+function FieldError({ errors }: { errors?: string[] }) {
+  if (!errors?.length) return null;
+  return (
+    <p
+      className="text-destructive flex items-start gap-1.5 text-xs"
+      role="alert"
+    >
+      <AlertCircleIcon
+        className="mt-0.5 size-3.5 shrink-0"
+        aria-hidden="true"
+      />
+      {errors[0]}
+    </p>
+  );
+}
+
 export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<StudentFormActionData>();
   const isSubmitting = fetcher.state !== "idle";
   const [classEndDate, setClassEndDate] = useState(
     defaultValues?.class_end_date || "",
@@ -68,6 +108,14 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
 
   return (
     <fetcher.Form method="post" action={actionUrl} className="space-y-6">
+      {fetcher.data?.error && (
+        <Alert variant="destructive">
+          <AlertCircleIcon />
+          <AlertTitle>저장하지 못했습니다</AlertTitle>
+          <AlertDescription>{fetcher.data.error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="name">이름 *</Label>
@@ -77,7 +125,9 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             required
             defaultValue={defaultValues?.name}
             placeholder="수강생 이름"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.name?.length)}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.name} />
         </div>
 
         <div className="space-y-2">
@@ -90,7 +140,9 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             defaultValue={defaultValues?.phone}
             placeholder="010-1234-5678"
             autoComplete="tel"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.phone?.length)}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.phone} />
         </div>
 
         <div className="space-y-2">
@@ -103,7 +155,9 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             type="email"
             defaultValue={defaultValues?.email}
             placeholder="student@example.com"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.email?.length)}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.email} />
           <p className="text-muted-foreground text-xs">
             연락용 정보입니다. 로그인 계정은 초대 링크를 수락할 때 별도로
             연결됩니다.
@@ -126,6 +180,7 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
               <SelectItem value="ADULT">성인</SelectItem>
             </SelectContent>
           </Select>
+          <FieldError errors={fetcher.data?.fieldErrors?.type} />
         </div>
 
         {mode === "edit" && (
@@ -135,7 +190,9 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
               name="state"
               defaultValue={defaultValues?.state || "NORMAL"}
             >
-              <SelectTrigger>
+              <SelectTrigger
+                aria-invalid={Boolean(fetcher.data?.fieldErrors?.state?.length)}
+              >
                 <SelectValue placeholder="상태 선택" />
               </SelectTrigger>
               <SelectContent>
@@ -144,6 +201,7 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
                 <SelectItem value="DELETED">탈퇴</SelectItem>
               </SelectContent>
             </Select>
+            <FieldError errors={fetcher.data?.fieldErrors?.state} />
           </div>
         )}
 
@@ -155,7 +213,9 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             required
             defaultValue={defaultValues?.region}
             placeholder="서울, 경기 등"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.region?.length)}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.region} />
         </div>
 
         <div className="space-y-2">
@@ -165,7 +225,11 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             name="birth_date"
             type="date"
             defaultValue={defaultValues?.birth_date}
+            aria-invalid={Boolean(
+              fetcher.data?.fieldErrors?.birth_date?.length,
+            )}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.birth_date} />
         </div>
 
         <div className="space-y-2">
@@ -177,7 +241,11 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             required
             defaultValue={defaultValues?.class_start_date}
             onChange={handleStartDateChange}
+            aria-invalid={Boolean(
+              fetcher.data?.fieldErrors?.class_start_date?.length,
+            )}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.class_start_date} />
         </div>
 
         <div className="space-y-2">
@@ -189,7 +257,11 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             required
             value={classEndDate}
             onChange={(e) => setClassEndDate(e.target.value)}
+            aria-invalid={Boolean(
+              fetcher.data?.fieldErrors?.class_end_date?.length,
+            )}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.class_end_date} />
           <p className="text-muted-foreground text-xs">
             수업 시작일 입력 시 자동으로 1년 후로 설정됩니다.
           </p>

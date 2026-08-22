@@ -1,6 +1,6 @@
 import type { Route } from "./+types/update";
 
-import { redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { requireMethod } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
@@ -27,24 +27,49 @@ export async function action({ request }: Route.ActionArgs) {
     formData.get("time_slot_interval_minutes") as string,
   );
 
+  if (
+    !Number.isInteger(maxConcurrentStudents) ||
+    maxConcurrentStudents < 1 ||
+    maxConcurrentStudents > 100 ||
+    !Number.isInteger(scheduleDurationHours) ||
+    scheduleDurationHours < 1 ||
+    scheduleDurationHours > 8 ||
+    ![15, 30, 45, 60].includes(timeSlotIntervalMinutes)
+  ) {
+    return data(
+      { error: "설정값의 허용 범위를 확인해 주세요." },
+      { status: 400 },
+    );
+  }
+
   // Update settings
-  await Promise.all([
-    updateSetting(client, {
-      organizationId,
-      key: SETTING_KEYS.MAX_CONCURRENT_STUDENTS,
-      value: { value: maxConcurrentStudents },
-    }),
-    updateSetting(client, {
-      organizationId,
-      key: SETTING_KEYS.SCHEDULE_DURATION_HOURS,
-      value: { value: scheduleDurationHours },
-    }),
-    updateSetting(client, {
-      organizationId,
-      key: SETTING_KEYS.TIME_SLOT_INTERVAL_MINUTES,
-      value: { value: timeSlotIntervalMinutes },
-    }),
-  ]);
+  try {
+    await Promise.all([
+      updateSetting(client, {
+        organizationId,
+        key: SETTING_KEYS.MAX_CONCURRENT_STUDENTS,
+        value: { value: maxConcurrentStudents },
+      }),
+      updateSetting(client, {
+        organizationId,
+        key: SETTING_KEYS.SCHEDULE_DURATION_HOURS,
+        value: { value: scheduleDurationHours },
+      }),
+      updateSetting(client, {
+        organizationId,
+        key: SETTING_KEYS.TIME_SLOT_INTERVAL_MINUTES,
+        value: { value: timeSlotIntervalMinutes },
+      }),
+    ]);
+  } catch (error) {
+    console.error("Failed to update settings", error);
+    return data(
+      {
+        error: "설정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
+  }
 
   return redirect("/admin/settings");
 }

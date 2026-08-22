@@ -43,7 +43,7 @@ export default function InstructorListScreen({
     id: number;
     name: string;
   } | null>(null);
-  const deleteFetcher = useFetcher();
+  const deleteFetcher = useFetcher<{ success: false; error?: string }>();
 
   return (
     <div className="space-y-6">
@@ -146,6 +146,11 @@ export default function InstructorListScreen({
               없습니다.
             </DialogDescription>
           </DialogHeader>
+          {deleteFetcher.data?.error && (
+            <p className="text-destructive text-sm" role="alert">
+              {deleteFetcher.data.error}
+            </p>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               취소
