@@ -396,6 +396,7 @@ export default function StudentListScreen({
               <TableHead className="w-24">상태</TableHead>
               <TableHead className="w-24">유형</TableHead>
               <TableHead>이름</TableHead>
+              <TableHead className="hidden md:table-cell">전화번호</TableHead>
               <TableHead className="hidden md:table-cell">이메일</TableHead>
               <TableHead className="hidden w-28 md:table-cell">
                 총 수강시간
@@ -409,7 +410,7 @@ export default function StudentListScreen({
           <TableBody>
             {students.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center">
+                <TableCell colSpan={9} className="py-8 text-center">
                   등록된 수강생이 없습니다.
                 </TableCell>
               </TableRow>
@@ -438,6 +439,19 @@ export default function StudentListScreen({
                       : "-"}
                   </TableCell>
                   <TableCell className="font-medium">{student.name}</TableCell>
+                  <TableCell className="hidden text-sm md:table-cell">
+                    {student.phone ? (
+                      <a
+                        href={`tel:${student.phone.replace(/\D/g, "")}`}
+                        className="font-medium hover:underline"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {formatPhoneNumber(student.phone)}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
                   <TableCell className="hidden text-sm md:table-cell">
                     {student.contact_email || "-"}
                   </TableCell>

@@ -164,7 +164,8 @@ export async function getActiveStudents(
       profiles!inner (
         profile_id,
         name,
-        color
+        color,
+        phone
       )
     `,
     )
@@ -182,6 +183,7 @@ export async function getActiveStudents(
     profile_id: m.profile_id,
     name: m.profiles.name,
     color: m.profiles.color,
+    phone: m.profiles.phone,
   }));
 }
 

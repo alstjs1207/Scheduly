@@ -70,6 +70,30 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
     <fetcher.Form method="post" action={actionUrl} className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
+          <Label htmlFor="name">이름 *</Label>
+          <Input
+            id="name"
+            name="name"
+            required
+            defaultValue={defaultValues?.name}
+            placeholder="수강생 이름"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">전화번호 *</Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            required
+            defaultValue={defaultValues?.phone}
+            placeholder="010-1234-5678"
+            autoComplete="tel"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="email">
             이메일 <span className="text-muted-foreground text-xs">(선택)</span>
           </Label>
@@ -84,17 +108,6 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             연락용 정보입니다. 로그인 계정은 초대 링크를 수락할 때 별도로
             연결됩니다.
           </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="name">이름 *</Label>
-          <Input
-            id="name"
-            name="name"
-            required
-            defaultValue={defaultValues?.name}
-            placeholder="수강생 이름"
-          />
         </div>
 
         <div className="space-y-2">
@@ -152,18 +165,6 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             name="birth_date"
             type="date"
             defaultValue={defaultValues?.birth_date}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">전화번호 *</Label>
-          <Input
-            id="phone"
-            name="phone"
-            type="tel"
-            required
-            defaultValue={defaultValues?.phone}
-            placeholder="010-1234-5678"
           />
         </div>
 

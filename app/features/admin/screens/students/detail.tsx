@@ -7,6 +7,7 @@ import {
   EditIcon,
   GraduationCapIcon,
   LinkIcon,
+  PhoneIcon,
   TrashIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -115,6 +116,18 @@ const typeLabels: Record<string, string> = {
 
 const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 
+function formatPhoneNumber(value: string | null) {
+  if (!value) return "연락처 없음";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+  }
+  if (digits.length === 10) {
+    return digits.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
+  }
+  return value;
+}
+
 export default function StudentDetailScreen({
   loaderData,
 }: Route.ComponentProps) {
@@ -172,10 +185,26 @@ export default function StudentDetailScreen({
                 {stateLabels[student.state]?.label || student.state}
               </Badge>
             </div>
-            <p className="text-muted-foreground hidden md:block">
-              {student.type ? typeLabels[student.type] : "-"} ·{" "}
-              {student.region || "-"}
-            </p>
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              {student.phone ? (
+                <a
+                  href={`tel:${student.phone.replace(/\D/g, "")}`}
+                  className="text-foreground inline-flex items-center gap-1.5 font-medium hover:underline"
+                >
+                  <PhoneIcon className="size-3.5" aria-hidden="true" />
+                  {formatPhoneNumber(student.phone)}
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <PhoneIcon className="size-3.5" aria-hidden="true" />
+                  연락처 없음
+                </span>
+              )}
+              <span className="hidden md:inline">
+                {student.type ? typeLabels[student.type] : "-"} ·{" "}
+                {student.region || "-"}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
