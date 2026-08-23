@@ -107,6 +107,47 @@ export async function getDailySchedules(
 }
 
 /**
+ * Get upcoming schedules starting today in KST.
+ */
+export async function getUpcomingSchedules(
+  client: SupabaseClient<Database>,
+  { organizationId, days = 14 }: { organizationId: string; days?: number },
+) {
+  const now = nowKST();
+  const startDate = fromKST(now.year, now.month, now.day);
+  const endDate = fromKST(now.year, now.month, now.day + days);
+
+  const { data, error } = await client
+    .from("schedules")
+    .select(
+      `
+      schedule_id, student_id, program_id, start_time, end_time,
+      student:profiles!schedules_student_id_profiles_profile_id_fk(
+        profile_id,
+        name,
+        color,
+        phone,
+        region
+      ),
+      program:programs(
+        program_id,
+        title
+      )
+    `,
+    )
+    .eq("organization_id", organizationId)
+    .gte("start_time", startDate.toISOString())
+    .lt("start_time", endDate.toISOString())
+    .order("start_time", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+/**
  * Get schedules for a specific student
  */
 export async function getStudentSchedules(

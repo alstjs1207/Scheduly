@@ -2,7 +2,6 @@ import {
   BellIcon,
   BookOpenIcon,
   BuildingIcon,
-  CalendarDaysIcon,
   CalendarIcon,
   HomeIcon,
   SettingsIcon,
@@ -44,11 +43,6 @@ const menuItems = [
     title: "홈화면",
     url: "/admin",
     icon: HomeIcon,
-  },
-  {
-    title: "오늘의 수업",
-    url: "/admin/today",
-    icon: CalendarDaysIcon,
   },
   {
     title: "일정 관리",

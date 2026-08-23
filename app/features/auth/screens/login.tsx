@@ -224,7 +224,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
   return (
     <div className="flex min-h-screen">
       {/* 왼쪽 패널 - 서비스 소개 (데스크톱만 표시) */}
-      <div className="bg-primary text-primary-foreground hidden flex-col items-center justify-center p-12 lg:flex lg:w-1/2">
+      <div className="hidden flex-col items-center justify-center border-r border-neutral-200 bg-white p-12 text-neutral-900 lg:flex lg:w-1/2">
         <div className="max-w-md space-y-8 pb-18 text-center">
           {/* 로고 */}
           <div className="flex items-center justify-center">
@@ -238,7 +238,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
           {/* 서비스 소개 */}
           <div className="space-y-4">
             <h1 className="text-3xl font-bold">스케줄 관리의 새로운 방법</h1>
-            <p className="text-primary-foreground/80 text-lg">
+            <p className="text-lg text-neutral-600">
               수강생 관리부터 일정까지 한 곳에서.
               <br />더 쉽고 효율적인 일정 관리를 경험하세요.
             </p>
