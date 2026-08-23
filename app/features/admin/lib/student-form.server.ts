@@ -29,8 +29,8 @@ const studentFormSchema = z
     type: studentTypeSchema,
     region: z.string().trim().min(1, "지역을 입력해 주세요."),
     birth_date: optionalDate,
-    class_start_date: z.string().date("수업 시작일을 입력해 주세요."),
-    class_end_date: z.string().date("수업 종료일을 입력해 주세요."),
+    class_start_date: optionalDate,
+    class_end_date: optionalDate,
     parent_name: z.preprocess(
       (value) => String(value || "").trim() || null,
       z.string().nullable(),
@@ -49,10 +49,16 @@ const studentFormSchema = z
       .regex(/^#[0-9a-fA-F]{6}$/)
       .default("#3B82F6"),
   })
-  .refine((values) => values.class_end_date >= values.class_start_date, {
-    path: ["class_end_date"],
-    message: "수업 종료일은 시작일 이후여야 합니다.",
-  });
+  .refine(
+    (values) =>
+      !values.class_start_date ||
+      !values.class_end_date ||
+      values.class_end_date >= values.class_start_date,
+    {
+      path: ["class_end_date"],
+      message: "수업 종료일은 시작일 이후여야 합니다.",
+    },
+  );
 
 export type StudentFormValues = z.infer<typeof studentFormSchema>;
 

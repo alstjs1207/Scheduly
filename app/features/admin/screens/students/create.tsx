@@ -1,7 +1,7 @@
 import type { Route } from "./+types/create";
 
-import { Link } from "react-router";
 import { ChevronLeftIcon } from "lucide-react";
+import { Link } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 import {
@@ -15,14 +15,17 @@ import makeServerClient from "~/core/lib/supa-client.server";
 
 import StudentForm from "../../components/student-form";
 import { requireAdminRole } from "../../guards.server";
+import { getDefaultStudentClassDates } from "../../lib/student-class-dates";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
   await requireAdminRole(client);
-  return {};
+  return getDefaultStudentClassDates();
 }
 
-export default function StudentCreateScreen() {
+export default function StudentCreateScreen({
+  loaderData,
+}: Route.ComponentProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -32,8 +35,8 @@ export default function StudentCreateScreen() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">수강생 등록</h1>
-          <p className="hidden md:block text-muted-foreground">
+          <h1 className="text-xl font-bold md:text-2xl">수강생 등록</h1>
+          <p className="text-muted-foreground hidden md:block">
             새로운 수강생 정보를 입력하세요.
           </p>
         </div>
@@ -47,7 +50,13 @@ export default function StudentCreateScreen() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <StudentForm mode="create" />
+          <StudentForm
+            mode="create"
+            defaultValues={{
+              class_start_date: loaderData.classStartDate,
+              class_end_date: loaderData.classEndDate,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

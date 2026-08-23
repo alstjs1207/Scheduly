@@ -19,6 +19,8 @@ import {
 } from "~/core/components/ui/select";
 import { Textarea } from "~/core/components/ui/textarea";
 
+import { addYearsToDateString } from "../lib/student-class-dates";
+
 interface StudentFormProps {
   mode: "create" | "edit";
   defaultValues?: {
@@ -79,6 +81,9 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
   const [classEndDate, setClassEndDate] = useState(
     defaultValues?.class_end_date || "",
   );
+  const [isClassEndDateManual, setIsClassEndDateManual] = useState(
+    mode === "edit",
+  );
   const [color, setColor] = useState(defaultValues?.color || "#3B82F6");
 
   const randomizeColor = () => {
@@ -92,12 +97,8 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const startDate = e.target.value;
-    if (startDate && !classEndDate) {
-      // Auto-fill end date to 1 year after start date
-      const date = new Date(startDate);
-      date.setFullYear(date.getFullYear() + 1);
-      const endDateStr = date.toISOString().split("T")[0];
-      setClassEndDate(endDateStr);
+    if (startDate && !isClassEndDateManual) {
+      setClassEndDate(addYearsToDateString(startDate));
     }
   };
 
@@ -233,12 +234,14 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="class_start_date">수업 시작일 *</Label>
+          <Label htmlFor="class_start_date">
+            수업 시작일{" "}
+            <span className="text-muted-foreground text-xs">(선택)</span>
+          </Label>
           <Input
             id="class_start_date"
             name="class_start_date"
             type="date"
-            required
             defaultValue={defaultValues?.class_start_date}
             onChange={handleStartDateChange}
             aria-invalid={Boolean(
@@ -249,21 +252,26 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="class_end_date">수업 종료일 *</Label>
+          <Label htmlFor="class_end_date">
+            수업 종료일{" "}
+            <span className="text-muted-foreground text-xs">(선택)</span>
+          </Label>
           <Input
             id="class_end_date"
             name="class_end_date"
             type="date"
-            required
             value={classEndDate}
-            onChange={(e) => setClassEndDate(e.target.value)}
+            onChange={(e) => {
+              setClassEndDate(e.target.value);
+              setIsClassEndDateManual(Boolean(e.target.value));
+            }}
             aria-invalid={Boolean(
               fetcher.data?.fieldErrors?.class_end_date?.length,
             )}
           />
           <FieldError errors={fetcher.data?.fieldErrors?.class_end_date} />
           <p className="text-muted-foreground text-xs">
-            수업 시작일 입력 시 자동으로 1년 후로 설정됩니다.
+            미입력 시 등록일과 등록일 기준 1년 후 날짜로 자동 저장됩니다.
           </p>
         </div>
 

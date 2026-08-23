@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  addYearsToDateString,
+  getDefaultStudentClassDates,
+} from "../app/features/admin/lib/student-class-dates.ts";
+import {
   normalizePhone,
   parseStudentForm,
 } from "../app/features/admin/lib/student-form.server.ts";
@@ -61,4 +65,32 @@ test("student form rejects an end date earlier than the start date", () => {
   assert.deepEqual(result.error.flatten().fieldErrors.class_end_date, [
     "수업 종료일은 시작일 이후여야 합니다.",
   ]);
+});
+
+test("student form accepts empty class dates", () => {
+  const formData = validStudentForm();
+  formData.set("class_start_date", "");
+  formData.set("class_end_date", "");
+
+  const result = parseStudentForm(formData);
+
+  assert.equal(result.success, true);
+  if (!result.success) return;
+  assert.equal(result.data.class_start_date, null);
+  assert.equal(result.data.class_end_date, null);
+});
+
+test("default class dates use the Korean registration date and one year", () => {
+  const result = getDefaultStudentClassDates(
+    new Date("2026-08-23T15:30:00.000Z"),
+  );
+
+  assert.deepEqual(result, {
+    classStartDate: "2026-08-24",
+    classEndDate: "2027-08-24",
+  });
+});
+
+test("one-year class date defaults clamp leap day to February 28", () => {
+  assert.equal(addYearsToDateString("2024-02-29"), "2025-02-28");
 });

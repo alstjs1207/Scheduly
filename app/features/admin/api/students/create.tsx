@@ -14,6 +14,10 @@ import makeServerClient from "~/core/lib/supa-client.server";
 
 import { requireAdminRole } from "../../guards.server";
 import {
+  addYearsToDateString,
+  getDefaultStudentClassDates,
+} from "../../lib/student-class-dates";
+import {
   findDuplicateStudentPhone,
   parseStudentForm,
 } from "../../lib/student-form.server";
@@ -37,6 +41,22 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
   const values = parsed.data;
+  const defaultClassDates = getDefaultStudentClassDates();
+  const classStartDate =
+    values.class_start_date || defaultClassDates.classStartDate;
+  const classEndDate =
+    values.class_end_date || addYearsToDateString(classStartDate);
+  if (classEndDate < classStartDate) {
+    return data(
+      {
+        success: false,
+        fieldErrors: {
+          class_end_date: ["수업 종료일은 시작일 이후여야 합니다."],
+        },
+      },
+      { status: 400 },
+    );
+  }
 
   try {
     const duplicate = await findDuplicateStudentPhone(adminClient, {
@@ -78,8 +98,8 @@ export async function action({ request }: Route.ActionArgs) {
     region: values.region,
     birth_date: values.birth_date,
     phone: values.phone,
-    class_start_date: values.class_start_date,
-    class_end_date: values.class_end_date,
+    class_start_date: classStartDate,
+    class_end_date: classEndDate,
     parent_name: values.parent_name,
     parent_phone: values.parent_phone,
     description: values.description,
