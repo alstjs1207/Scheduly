@@ -29,6 +29,7 @@ interface Student {
   profile_id: string;
   name: string;
   color: string | null;
+  phone: string | null;
 }
 
 interface Program {
@@ -75,10 +76,15 @@ export default function ScheduleForm({
 
   const allSelected =
     students.length > 0 && selectedStudents.size === students.length;
-  const visibleStudents = students.filter((student) =>
-    student.name
-      .toLocaleLowerCase("ko-KR")
-      .includes(studentQuery.trim().toLocaleLowerCase("ko-KR")),
+  const normalizedStudentQuery = studentQuery.trim().toLocaleLowerCase("ko-KR");
+  const digitStudentQuery = studentQuery.replace(/\D/g, "");
+  const visibleStudents = students.filter(
+    (student) =>
+      student.name
+        .toLocaleLowerCase("ko-KR")
+        .includes(normalizedStudentQuery) ||
+      (digitStudentQuery.length > 0 &&
+        student.phone?.replace(/\D/g, "").includes(digitStudentQuery)),
   );
 
   function toggleStudent(id: string) {
@@ -135,7 +141,7 @@ export default function ScheduleForm({
                 type="search"
                 value={studentQuery}
                 onChange={(event) => setStudentQuery(event.target.value)}
-                placeholder="수강생 이름 검색"
+                placeholder="수강생 이름 또는 전화번호 검색"
                 className="h-11 md:max-w-72"
               />
               <div className="flex flex-wrap gap-2">
@@ -165,7 +171,12 @@ export default function ScheduleForm({
                       className="h-2.5 w-2.5 rounded-full ring-1 ring-black/15 dark:ring-white/30"
                       style={{ backgroundColor: student.color || "#3B82F6" }}
                     />
-                    {student.name}
+                    <span>{student.name}</span>
+                    {student.phone && (
+                      <span className="text-muted-foreground text-xs font-normal">
+                        {student.phone}
+                      </span>
+                    )}
                   </Button>
                 ))}
               </div>
@@ -215,7 +226,12 @@ export default function ScheduleForm({
                             backgroundColor: student.color || "#3B82F6",
                           }}
                         />
-                        {student.name}
+                        <span>{student.name}</span>
+                        {student.phone && (
+                          <span className="text-muted-foreground ml-1 text-xs">
+                            {student.phone}
+                          </span>
+                        )}
                       </div>
                     </SelectItem>
                   ))}

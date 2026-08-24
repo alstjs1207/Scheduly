@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import makeServerClient from "~/core/lib/supa-client.server";
 import { isAdmin } from "~/features/admin/guards.server";
+import { hashStudentInviteToken } from "~/features/admin/lib/student-invite.server";
 
 /**
  * Meta function for the social authentication complete page
@@ -69,36 +70,53 @@ const errorSchema = z.object({
 export async function loader({ request }: Route.LoaderArgs) {
   // Extract query parameters from the URL
   const { searchParams } = new URL(request.url);
-  
+
   // Try to validate the parameters as a successful OAuth callback
   const { success, data: validData } = searchParamsSchema.safeParse(
     Object.fromEntries(searchParams),
   );
-  
+
   // If not a successful callback, check if it's an error callback
   if (!success) {
     const { data: errorData, success: errorSuccess } = errorSchema.safeParse(
       Object.fromEntries(searchParams),
     );
-    
+
     // If neither a successful nor error callback, return generic error
     if (!errorSuccess) {
       return data({ error: "Invalid code" }, { status: 400 });
     }
-    
+
     // Return the error description from the provider
     return data({ error: errorData.error_description }, { status: 400 });
   }
 
   // Create Supabase client and get response headers for auth cookies
   const [client, headers] = makeServerClient(request);
-  
+
   // Exchange the OAuth code for a session
   const { error } = await client.auth.exchangeCodeForSession(validData.code);
 
   // Return error if session exchange fails
   if (error) {
     return data({ error: error.message }, { status: 400 });
+  }
+
+  const invite = searchParams.get("invite");
+  if (invite) {
+    const { error: claimError } = await client.rpc("claim_student_invite", {
+      p_token_hash: hashStudentInviteToken(invite),
+    });
+
+    if (claimError) {
+      console.error("Student invite claim failed", claimError);
+      return data(
+        { error: "초대 링크가 만료되었거나 이미 연결된 계정입니다." },
+        { status: 400, headers },
+      );
+    }
+
+    return redirect("/dashboard", { headers });
   }
 
   // Redirect based on user role

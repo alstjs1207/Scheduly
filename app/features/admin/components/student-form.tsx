@@ -1,6 +1,12 @@
+import { AlertCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { useFetcher } from "react-router";
 
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "~/core/components/ui/alert";
 import { Button } from "~/core/components/ui/button";
 import { Input } from "~/core/components/ui/input";
 import { Label } from "~/core/components/ui/label";
@@ -12,6 +18,8 @@ import {
   SelectValue,
 } from "~/core/components/ui/select";
 import { Textarea } from "~/core/components/ui/textarea";
+
+import { addYearsToDateString } from "../lib/student-class-dates";
 
 interface StudentFormProps {
   mode: "create" | "edit";
@@ -33,25 +41,64 @@ interface StudentFormProps {
   };
 }
 
+type StudentFormField =
+  | "name"
+  | "phone"
+  | "email"
+  | "type"
+  | "state"
+  | "region"
+  | "birth_date"
+  | "class_start_date"
+  | "class_end_date"
+  | "color";
+
+type StudentFormActionData = {
+  success: false;
+  error?: string;
+  fieldErrors?: Partial<Record<StudentFormField, string[]>>;
+};
+
+function FieldError({ errors }: { errors?: string[] }) {
+  if (!errors?.length) return null;
+  return (
+    <p
+      className="text-destructive flex items-start gap-1.5 text-xs"
+      role="alert"
+    >
+      <AlertCircleIcon
+        className="mt-0.5 size-3.5 shrink-0"
+        aria-hidden="true"
+      />
+      {errors[0]}
+    </p>
+  );
+}
+
 export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<StudentFormActionData>();
   const isSubmitting = fetcher.state !== "idle";
-  const [classEndDate, setClassEndDate] = useState(defaultValues?.class_end_date || "");
+  const [classEndDate, setClassEndDate] = useState(
+    defaultValues?.class_end_date || "",
+  );
+  const [isClassEndDateManual, setIsClassEndDateManual] = useState(
+    mode === "edit",
+  );
   const [color, setColor] = useState(defaultValues?.color || "#3B82F6");
 
   const randomizeColor = () => {
-    const hex = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+    const hex =
+      "#" +
+      Math.floor(Math.random() * 0xffffff)
+        .toString(16)
+        .padStart(6, "0");
     setColor(hex);
   };
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const startDate = e.target.value;
-    if (startDate && !classEndDate) {
-      // Auto-fill end date to 1 year after start date
-      const date = new Date(startDate);
-      date.setFullYear(date.getFullYear() + 1);
-      const endDateStr = date.toISOString().split("T")[0];
-      setClassEndDate(endDateStr);
+    if (startDate && !isClassEndDateManual) {
+      setClassEndDate(addYearsToDateString(startDate));
     }
   };
 
@@ -62,20 +109,15 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
 
   return (
     <fetcher.Form method="post" action={actionUrl} className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="email">이메일 {mode === "create" && "*"}</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            required={mode === "create"}
-            disabled={mode === "edit"}
-            defaultValue={defaultValues?.email}
-            placeholder="student@example.com"
-          />
-        </div>
+      {fetcher.data?.error && (
+        <Alert variant="destructive">
+          <AlertCircleIcon />
+          <AlertTitle>저장하지 못했습니다</AlertTitle>
+          <AlertDescription>{fetcher.data.error}</AlertDescription>
+        </Alert>
+      )}
 
+      <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="name">이름 *</Label>
           <Input
@@ -84,58 +126,9 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             required
             defaultValue={defaultValues?.name}
             placeholder="수강생 이름"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.name?.length)}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="type">유형 *</Label>
-          <Select name="type" defaultValue={defaultValues?.type || "EXAMINEE"} required>
-            <SelectTrigger>
-              <SelectValue placeholder="유형 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="EXAMINEE">입시생</SelectItem>
-              <SelectItem value="DROPPER">재수생</SelectItem>
-              <SelectItem value="ADULT">성인</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {mode === "edit" && (
-          <div className="space-y-2">
-            <Label htmlFor="state">상태</Label>
-            <Select name="state" defaultValue={defaultValues?.state || "NORMAL"}>
-              <SelectTrigger>
-                <SelectValue placeholder="상태 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="NORMAL">정상</SelectItem>
-                <SelectItem value="GRADUATE">졸업</SelectItem>
-                <SelectItem value="DELETED">탈퇴</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <Label htmlFor="region">지역 *</Label>
-          <Input
-            id="region"
-            name="region"
-            required
-            defaultValue={defaultValues?.region}
-            placeholder="서울, 경기 등"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="birth_date">생년월일</Label>
-          <Input
-            id="birth_date"
-            name="birth_date"
-            type="date"
-            defaultValue={defaultValues?.birth_date}
-          />
+          <FieldError errors={fetcher.data?.fieldErrors?.name} />
         </div>
 
         <div className="space-y-2">
@@ -147,33 +140,138 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
             required
             defaultValue={defaultValues?.phone}
             placeholder="010-1234-5678"
+            autoComplete="tel"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.phone?.length)}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.phone} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="class_start_date">수업 시작일 *</Label>
+          <Label htmlFor="email">
+            이메일 <span className="text-muted-foreground text-xs">(선택)</span>
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            defaultValue={defaultValues?.email}
+            placeholder="student@example.com"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.email?.length)}
+          />
+          <FieldError errors={fetcher.data?.fieldErrors?.email} />
+          <p className="text-muted-foreground text-xs">
+            연락용 정보입니다. 로그인 계정은 초대 링크를 수락할 때 별도로
+            연결됩니다.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="type">유형 *</Label>
+          <Select
+            name="type"
+            defaultValue={defaultValues?.type || "EXAMINEE"}
+            required
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="유형 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="EXAMINEE">입시생</SelectItem>
+              <SelectItem value="DROPPER">재수생</SelectItem>
+              <SelectItem value="ADULT">성인</SelectItem>
+            </SelectContent>
+          </Select>
+          <FieldError errors={fetcher.data?.fieldErrors?.type} />
+        </div>
+
+        {mode === "edit" && (
+          <div className="space-y-2">
+            <Label htmlFor="state">상태</Label>
+            <Select
+              name="state"
+              defaultValue={defaultValues?.state || "NORMAL"}
+            >
+              <SelectTrigger
+                aria-invalid={Boolean(fetcher.data?.fieldErrors?.state?.length)}
+              >
+                <SelectValue placeholder="상태 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NORMAL">정상</SelectItem>
+                <SelectItem value="GRADUATE">졸업</SelectItem>
+                <SelectItem value="DELETED">탈퇴</SelectItem>
+              </SelectContent>
+            </Select>
+            <FieldError errors={fetcher.data?.fieldErrors?.state} />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="region">지역 *</Label>
+          <Input
+            id="region"
+            name="region"
+            required
+            defaultValue={defaultValues?.region}
+            placeholder="서울, 경기 등"
+            aria-invalid={Boolean(fetcher.data?.fieldErrors?.region?.length)}
+          />
+          <FieldError errors={fetcher.data?.fieldErrors?.region} />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="birth_date">생년월일</Label>
+          <Input
+            id="birth_date"
+            name="birth_date"
+            type="date"
+            defaultValue={defaultValues?.birth_date}
+            aria-invalid={Boolean(
+              fetcher.data?.fieldErrors?.birth_date?.length,
+            )}
+          />
+          <FieldError errors={fetcher.data?.fieldErrors?.birth_date} />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="class_start_date">
+            수업 시작일{" "}
+            <span className="text-muted-foreground text-xs">(선택)</span>
+          </Label>
           <Input
             id="class_start_date"
             name="class_start_date"
             type="date"
-            required
             defaultValue={defaultValues?.class_start_date}
             onChange={handleStartDateChange}
+            aria-invalid={Boolean(
+              fetcher.data?.fieldErrors?.class_start_date?.length,
+            )}
           />
+          <FieldError errors={fetcher.data?.fieldErrors?.class_start_date} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="class_end_date">수업 종료일 *</Label>
+          <Label htmlFor="class_end_date">
+            수업 종료일{" "}
+            <span className="text-muted-foreground text-xs">(선택)</span>
+          </Label>
           <Input
             id="class_end_date"
             name="class_end_date"
             type="date"
-            required
             value={classEndDate}
-            onChange={(e) => setClassEndDate(e.target.value)}
+            onChange={(e) => {
+              setClassEndDate(e.target.value);
+              setIsClassEndDateManual(Boolean(e.target.value));
+            }}
+            aria-invalid={Boolean(
+              fetcher.data?.fieldErrors?.class_end_date?.length,
+            )}
           />
-          <p className="text-xs text-muted-foreground">
-            수업 시작일 입력 시 자동으로 1년 후로 설정됩니다.
+          <FieldError errors={fetcher.data?.fieldErrors?.class_end_date} />
+          <p className="text-muted-foreground text-xs">
+            미입력 시 등록일과 등록일 기준 1년 후 날짜로 자동 저장됩니다.
           </p>
         </div>
 
@@ -209,7 +307,12 @@ export default function StudentForm({ mode, defaultValues }: StudentFormProps) {
               onChange={(e) => setColor(e.target.value)}
               className="h-10 w-20"
             />
-            <Button type="button" variant="outline" size="sm" onClick={randomizeColor}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={randomizeColor}
+            >
               랜덤
             </Button>
           </div>

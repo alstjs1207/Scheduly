@@ -50,6 +50,18 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   // Create Supabase client and get response headers for auth cookies
   const [client, headers] = makeServerClient(request);
+  const invite = new URL(request.url).searchParams.get("invite");
+  if (invite && parsedParams.provider !== "kakao") {
+    return data(
+      { error: "초대 링크는 카카오 로그인만 지원합니다." },
+      { status: 400 },
+    );
+  }
+  const callbackUrl = new URL(
+    `/auth/social/complete/${parsedParams.provider}`,
+    process.env.SITE_URL || new URL(request.url).origin,
+  );
+  if (invite) callbackUrl.searchParams.set("invite", invite);
 
   // Initialize OAuth flow with the specified provider
   const { data: signInData, error: signInError } =
@@ -57,7 +69,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       provider: parsedParams.provider,
       options: {
         // Set the callback URL for when authentication is complete
-        redirectTo: `${process.env.SITE_URL}/auth/social/complete/${parsedParams.provider}`,
+        redirectTo: callbackUrl.toString(),
       },
     });
 

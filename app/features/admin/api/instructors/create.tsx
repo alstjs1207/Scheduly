@@ -1,8 +1,9 @@
 /**
  * Instructor Creation API
  */
-import type { Route } from "./+types/create";
 import type { Json } from "database.types";
+
+import type { Route } from "./+types/create";
 
 import { data, redirect } from "react-router";
 
@@ -22,8 +23,12 @@ export async function action({ request }: Route.ActionArgs) {
 
   const formData = await request.formData();
 
-  const name = formData.get("name") as string;
+  const name = String(formData.get("name") || "").trim();
   const info = formData.get("info") as string | null;
+
+  if (!name) {
+    return data({ error: "강사명을 입력해 주세요." }, { status: 400 });
+  }
 
   // JSONB 필드
   const careerStr = formData.get("career") as string | null;
@@ -44,14 +49,25 @@ export async function action({ request }: Route.ActionArgs) {
   if (snsYoutube) sns.youtube = snsYoutube;
 
   // 먼저 강사 생성 (ID 획득)
-  const instructor = await createInstructor(client, {
-    organization_id: organizationId,
-    name,
-    info: info || null,
-    photo_url: null, // 파일 업로드 후 업데이트
-    career,
-    sns: Object.keys(sns).length > 0 ? sns : {},
-  });
+  let instructor;
+  try {
+    instructor = await createInstructor(client, {
+      organization_id: organizationId,
+      name,
+      info: info || null,
+      photo_url: null, // 파일 업로드 후 업데이트
+      career,
+      sns: Object.keys(sns).length > 0 ? sns : {},
+    });
+  } catch (error) {
+    console.error("Failed to create instructor", error);
+    return data(
+      {
+        error: "강사 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
+  }
 
   // 프로필 사진 업로드
   const photoFile = formData.get("photo") as File | null;

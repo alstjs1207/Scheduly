@@ -1,12 +1,12 @@
 import type { Route } from "./+types/delete";
 
-import { redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { requireMethod } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 import {
-  deleteSchedule,
   deleteFutureSchedules,
+  deleteSchedule,
   getScheduleById,
 } from "~/features/schedules/queries";
 
@@ -23,24 +23,38 @@ export async function action({ request, params }: Route.ActionArgs) {
   const deleteScope = formData.get("delete_scope") as "single" | "future";
 
   // Get current schedule
-  const currentSchedule = await getScheduleById(client, {
-    scheduleId: parseInt(scheduleId),
-  });
-
-  // Check if schedule is in the past
-  if (new Date(currentSchedule.start_time) < new Date()) {
-    throw new Error("과거 날짜의 일정은 삭제할 수 없습니다.");
-  }
-
-  if (deleteScope === "future" && currentSchedule.parent_schedule_id) {
-    // Delete all future schedules in the series
-    await deleteFutureSchedules(client, {
-      parentScheduleId: currentSchedule.parent_schedule_id,
-      fromDate: new Date(currentSchedule.start_time),
+  try {
+    const currentSchedule = await getScheduleById(client, {
+      scheduleId: parseInt(scheduleId),
     });
-  } else {
-    // Delete single schedule
-    await deleteSchedule(client, { scheduleId: parseInt(scheduleId) });
+
+    // Check if schedule is in the past
+    if (new Date(currentSchedule.start_time) < new Date()) {
+      return data(
+        { success: false, error: "과거 날짜의 일정은 삭제할 수 없습니다." },
+        { status: 400 },
+      );
+    }
+
+    if (deleteScope === "future" && currentSchedule.parent_schedule_id) {
+      // Delete all future schedules in the series
+      await deleteFutureSchedules(client, {
+        parentScheduleId: currentSchedule.parent_schedule_id,
+        fromDate: new Date(currentSchedule.start_time),
+      });
+    } else {
+      // Delete single schedule
+      await deleteSchedule(client, { scheduleId: parseInt(scheduleId) });
+    }
+  } catch (error) {
+    console.error("Failed to delete schedule", error);
+    return data(
+      {
+        success: false,
+        error: "일정을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
   }
 
   return redirect("/admin/schedules");

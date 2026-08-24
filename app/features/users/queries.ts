@@ -11,7 +11,7 @@ export async function getUserProfile(
   const { data, error } = await client
     .from("profiles")
     .select("*")
-    .eq("profile_id", userId)
+    .eq("auth_user_id", userId)
     .single();
   if (error) {
     throw error;

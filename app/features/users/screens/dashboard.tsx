@@ -1,4 +1,4 @@
-import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 
 import {
   CalendarDaysIcon,
@@ -69,7 +69,9 @@ export const meta: MetaFunction = () => {
   return [{ title: `대시보드 | ${import.meta.env.VITE_APP_NAME}` }];
 };
 
-export async function loader({ request }: LoaderFunctionArgs): Promise<LoaderData> {
+export async function loader({
+  request,
+}: LoaderFunctionArgs): Promise<LoaderData> {
   const [client] = makeServerClient(request);
   const {
     data: { user },
@@ -93,17 +95,25 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<LoaderDat
     };
   }
 
+  const { data: profile } = await client
+    .from("profiles")
+    .select("profile_id")
+    .eq("auth_user_id", user.id)
+    .single();
+  if (!profile) throw new Response(null, { status: 403 });
+  const studentId = profile.profile_id;
+
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
   const [schedules, totalHours, yearlyStats, monthlyStats, classDates] =
     await Promise.all([
-      getStudentSchedules(client, { studentId: user.id, year, month }),
-      calculateStudentTotalHours(client, { studentId: user.id }),
-      getStudentYearlyStats(client, { studentId: user.id, year }),
-      getStudentMonthlyStats(client, { studentId: user.id }),
-      getStudentClassDates(client, { studentId: user.id }),
+      getStudentSchedules(client, { studentId, year, month }),
+      calculateStudentTotalHours(client, { studentId }),
+      getStudentYearlyStats(client, { studentId, year }),
+      getStudentMonthlyStats(client, { studentId }),
+      getStudentClassDates(client, { studentId }),
     ]);
 
   // 다가오는 일정 (현재 시간 이후)
@@ -192,10 +202,12 @@ export default function Dashboard({ loaderData }: { loaderData: LoaderData }) {
         : 0;
 
   // 차트 데이터 변환
-  const chartData = yearlyStats.map((stat: { month: number; hours: number }) => ({
-    name: MONTH_NAMES[stat.month - 1],
-    hours: stat.hours,
-  }));
+  const chartData = yearlyStats.map(
+    (stat: { month: number; hours: number }) => ({
+      name: MONTH_NAMES[stat.month - 1],
+      hours: stat.hours,
+    }),
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 pt-0">
@@ -411,7 +423,10 @@ export default function Dashboard({ loaderData }: { loaderData: LoaderData }) {
             <div className="space-y-4">
               {Object.entries(
                 upcomingSchedules.reduce<Record<string, ScheduleItem[]>>(
-                  (groups: Record<string, ScheduleItem[]>, schedule: ScheduleItem) => {
+                  (
+                    groups: Record<string, ScheduleItem[]>,
+                    schedule: ScheduleItem,
+                  ) => {
                     const key = schedule.program?.title || "미지정";
                     if (!groups[key]) groups[key] = [];
                     groups[key].push(schedule);
@@ -432,9 +447,15 @@ export default function Dashboard({ loaderData }: { loaderData: LoaderData }) {
                     <TableBody>
                       {schedules.map((schedule: ScheduleItem) => {
                         const date = new Date(schedule.start_time);
-                        const dayOfWeek = ["일", "월", "화", "수", "목", "금", "토"][
-                          date.getDay()
-                        ];
+                        const dayOfWeek = [
+                          "일",
+                          "월",
+                          "화",
+                          "수",
+                          "목",
+                          "금",
+                          "토",
+                        ][date.getDay()];
                         return (
                           <TableRow key={schedule.schedule_id}>
                             <TableCell>
@@ -451,7 +472,8 @@ export default function Dashboard({ loaderData }: { loaderData: LoaderData }) {
                                       : ""
                                 }
                               >
-                                {" "}({dayOfWeek})
+                                {" "}
+                                ({dayOfWeek})
                               </span>
                             </TableCell>
                             <TableCell>

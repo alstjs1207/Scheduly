@@ -1,20 +1,26 @@
 /**
  * Student Creation API
  *
- * Creates a new student with:
- * 1. Supabase auth user
- * 2. Profile record
- * 3. Organization membership with STUDENT role
+ * Creates a management profile and organization membership. Authentication is
+ * connected later only when the administrator creates an invitation link.
  */
 import type { Route } from "./+types/create";
 
-import { redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { requireMethod } from "~/core/lib/guards.server";
 import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 
 import { requireAdminRole } from "../../guards.server";
+import {
+  addYearsToDateString,
+  getDefaultStudentClassDates,
+} from "../../lib/student-class-dates";
+import {
+  findDuplicateStudentPhone,
+  parseStudentForm,
+} from "../../lib/student-form.server";
 
 export async function action({ request }: Route.ActionArgs) {
   requireMethod("POST")(request);
@@ -24,59 +30,96 @@ export async function action({ request }: Route.ActionArgs) {
 
   const formData = await request.formData();
 
-  const email = formData.get("email") as string;
-  const name = formData.get("name") as string;
-  const studentType = formData.get("type") as "EXAMINEE" | "DROPPER" | "ADULT";
-
-  // 임시 비밀번호 생성 (사용자는 비밀번호 재설정으로 변경해야 함)
-  const tempPassword = crypto.randomUUID();
-
-  // 1. auth.users에 사용자 생성
-  const { data: authData, error: authError } =
-    await adminClient.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        name,
+  const parsed = parseStudentForm(formData);
+  if (!parsed.success) {
+    return data(
+      {
+        success: false,
+        fieldErrors: parsed.error.flatten().fieldErrors,
       },
-      app_metadata: {
-        provider: "email",
-        admin_created: true, // 트리거에서 admin 생성을 구분하기 위해
+      { status: 400 },
+    );
+  }
+  const values = parsed.data;
+  const defaultClassDates = getDefaultStudentClassDates();
+  const classStartDate =
+    values.class_start_date || defaultClassDates.classStartDate;
+  const classEndDate =
+    values.class_end_date || addYearsToDateString(classStartDate);
+  if (classEndDate < classStartDate) {
+    return data(
+      {
+        success: false,
+        fieldErrors: {
+          class_end_date: ["수업 종료일은 시작일 이후여야 합니다."],
+        },
       },
-    });
-
-  if (authError) {
-    console.error("Auth Error Details:", JSON.stringify(authError, null, 2));
-    throw new Error(
-      `${authError.message} - ${authError.status} - ${authError.code}`,
+      { status: 400 },
     );
   }
 
-  // 2. profiles에 학생 정보 직접 INSERT (adminClient는 RLS 우회)
+  try {
+    const duplicate = await findDuplicateStudentPhone(adminClient, {
+      organizationId,
+      phone: values.phone,
+    });
+    if (duplicate) {
+      const stateText = duplicate.state === "DELETED" ? "탈퇴 처리된 " : "";
+      return data(
+        {
+          success: false,
+          fieldErrors: {
+            phone: [
+              `동일한 전화번호로 ${stateText}수강생 '${duplicate.name}'님이 이미 등록되어 있습니다.`,
+            ],
+          },
+        },
+        { status: 409 },
+      );
+    }
+  } catch (error) {
+    console.error("Failed to check duplicate student phone", error);
+    return data(
+      {
+        success: false,
+        error:
+          "전화번호 중복 여부를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
+  }
+
+  const profileId = crypto.randomUUID();
   const studentData = {
-    profile_id: authData.user.id,
-    name,
-    region: formData.get("region") as string,
-    birth_date: formData.get("birth_date") as string,
-    phone: formData.get("phone") as string,
-    class_start_date: formData.get("class_start_date") as string,
-    class_end_date: formData.get("class_end_date") as string,
-    parent_name: (formData.get("parent_name") as string) || null,
-    parent_phone: (formData.get("parent_phone") as string) || null,
-    description: (formData.get("description") as string) || null,
-    color: (formData.get("color") as string) || "#3B82F6",
+    profile_id: profileId,
+    auth_user_id: null,
+    contact_email: values.email,
+    name: values.name,
+    region: values.region,
+    birth_date: values.birth_date,
+    phone: values.phone,
+    class_start_date: classStartDate,
+    class_end_date: classEndDate,
+    parent_name: values.parent_name,
+    parent_phone: values.parent_phone,
+    description: values.description,
+    color: values.color,
     marketing_consent: false,
   };
 
   const { error: profileError } = await adminClient
     .from("profiles")
-    .upsert(studentData, { onConflict: "profile_id" });
+    .insert(studentData);
 
   if (profileError) {
-    // 프로필 생성 실패 시 생성된 사용자 삭제
-    await adminClient.auth.admin.deleteUser(authData.user.id);
-    throw new Error(profileError.message);
+    console.error("Failed to create student profile", profileError);
+    return data(
+      {
+        success: false,
+        error: "수강생 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
   }
 
   // 3. organization_members에 학생 멤버십 생성
@@ -84,18 +127,23 @@ export async function action({ request }: Route.ActionArgs) {
     .from("organization_members")
     .insert({
       organization_id: organizationId,
-      profile_id: authData.user.id,
+      profile_id: profileId,
       role: "STUDENT",
       state: "NORMAL",
-      type: studentType,
+      type: values.type,
     });
 
   if (memberError) {
-    // 멤버십 생성 실패 시 프로필과 사용자 삭제
-    await adminClient.from("profiles").delete().eq("profile_id", authData.user.id);
-    await adminClient.auth.admin.deleteUser(authData.user.id);
-    throw new Error(memberError.message);
+    await adminClient.from("profiles").delete().eq("profile_id", profileId);
+    console.error("Failed to create student membership", memberError);
+    return data(
+      {
+        success: false,
+        error: "수강생 소속을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
   }
 
-  return redirect(`/admin/students/${authData.user.id}`);
+  return redirect(`/admin/students/${profileId}`);
 }

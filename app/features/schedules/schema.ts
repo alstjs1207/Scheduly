@@ -59,21 +59,33 @@ export const schedules = pgTable(
       for: "select",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${table.student_id} = ${authUid} AND is_same_organization(${table.organization_id})`,
+      using: sql`EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.profile_id = ${table.student_id}
+        AND profiles.auth_user_id = ${authUid}
+      ) AND is_same_organization(${table.organization_id})`,
     }),
     // RLS Policy: Students can insert their own schedules (within same organization)
     pgPolicy("student-insert-own-schedules-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`${table.student_id} = ${authUid} AND is_same_organization(${table.organization_id})`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.profile_id = ${table.student_id}
+        AND profiles.auth_user_id = ${authUid}
+      ) AND is_same_organization(${table.organization_id})`,
     }),
     // RLS Policy: Students can delete their own schedules (not on the same day)
     pgPolicy("student-delete-own-schedules-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${table.student_id} = ${authUid} AND is_same_organization(${table.organization_id}) AND ${table.start_time}::date > CURRENT_DATE`,
+      using: sql`EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.profile_id = ${table.student_id}
+        AND profiles.auth_user_id = ${authUid}
+      ) AND is_same_organization(${table.organization_id}) AND ${table.start_time}::date > CURRENT_DATE`,
     }),
     // RLS Policy: ADMIN can view schedules in their organization
     pgPolicy("admin-select-org-schedules-policy", {

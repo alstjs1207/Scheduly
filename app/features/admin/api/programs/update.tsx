@@ -3,8 +3,9 @@
  *
  * Updates an existing program.
  */
-import type { Route } from "./+types/update";
 import type { Json } from "database.types";
+
+import type { Route } from "./+types/update";
 
 import { data, redirect } from "react-router";
 
@@ -65,14 +66,19 @@ export async function action({ request, params }: Route.ActionArgs) {
     try {
       curriculum = JSON.parse(curriculumStr);
     } catch {
-      return data({ error: "잘못된 커리큘럼 데이터 형식입니다." }, { status: 400 });
+      return data(
+        { error: "잘못된 커리큘럼 데이터 형식입니다." },
+        { status: 400 },
+      );
     }
   }
 
   // 커버 이미지 처리
   let coverImageUrl: string | null = null;
   const coverImageFile = formData.get("cover_image") as File | null;
-  const existingCoverImageUrl = formData.get("existing_cover_image_url") as string | null;
+  const existingCoverImageUrl = formData.get("existing_cover_image_url") as
+    | string
+    | null;
 
   if (coverImageFile && coverImageFile.size > 0) {
     // 새 이미지 업로드
@@ -94,27 +100,47 @@ export async function action({ request, params }: Route.ActionArgs) {
     coverImageUrl = existingCoverImageUrl;
   }
 
-  await updateProgram(client, {
-    programId,
-    updates: {
-      instructor_id: instructorId,
-      title,
-      status,
-      subtitle: subtitle || null,
-      description: description || null,
-      level: level || null,
-      price: price || null,
-      slug: slug || null,
-      cover_image_url: coverImageUrl,
-      location_type: locationType || "offline",
-      location_address: locationAddress || null,
-      duration_minutes: durationMinutes || 120,
-      total_sessions: totalSessions || 4,
-      curriculum,
-      max_capacity: maxCapacity || null,
-      is_public: isPublic,
-    },
-  });
+  try {
+    await updateProgram(client, {
+      programId,
+      updates: {
+        instructor_id: instructorId,
+        title,
+        status,
+        subtitle: subtitle || null,
+        description: description || null,
+        level: level || null,
+        price: price || null,
+        slug: slug || null,
+        cover_image_url: coverImageUrl,
+        location_type: locationType || "offline",
+        location_address: locationAddress || null,
+        duration_minutes: durationMinutes || 120,
+        total_sessions: totalSessions || 4,
+        curriculum,
+        max_capacity: maxCapacity || null,
+        is_public: isPublic,
+      },
+    });
+  } catch (error: unknown) {
+    const pgError = error as { code?: string };
+    if (pgError?.code === "23505") {
+      return data(
+        {
+          error:
+            "이미 사용 중인 URL 슬러그입니다. 다른 슬러그를 입력해 주세요.",
+        },
+        { status: 400 },
+      );
+    }
+    console.error("Failed to update program", error);
+    return data(
+      {
+        error: "클래스 정보를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      { status: 500 },
+    );
+  }
 
   return redirect(`/admin/programs/${programId}`);
 }

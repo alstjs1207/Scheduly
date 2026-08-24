@@ -1,14 +1,10 @@
 import type { Route } from "./+types/calendar";
 
 import { ListIcon, Loader2 } from "lucide-react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, useFetcher } from "react-router";
 
 import { CalendarSkeleton } from "~/core/components/calendar-skeleton";
-
-// Lazy load the calendar component
-const StudentCalendarInner = lazy(() => import("~/features/schedules/components/student-calendar-inner"));
-
 import { Button } from "~/core/components/ui/button";
 import {
   Card,
@@ -42,7 +38,9 @@ import {
   SheetTitle,
 } from "~/core/components/ui/sheet";
 import { useIsMobile } from "~/core/hooks/use-mobile";
-import makeServerClient, { getSessionUser } from "~/core/lib/supa-client.server";
+import makeServerClient, {
+  getSessionUser,
+} from "~/core/lib/supa-client.server";
 import { getOrganizationMembership } from "~/features/organizations/queries";
 import { getActivePrograms } from "~/features/programs/queries";
 import { MobileCalendar } from "~/features/schedules/components/mobile-calendar";
@@ -54,6 +52,12 @@ import {
   generateTimeSlots,
   getStudentAllowedDateRange,
 } from "~/features/schedules/utils/student-schedule-rules";
+import { getUserProfile } from "~/features/users/queries";
+
+// Lazy load the calendar component
+const StudentCalendarInner = lazy(
+  () => import("~/features/schedules/components/student-calendar-inner"),
+);
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
@@ -61,10 +65,12 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!user) {
     throw new Response(null, { status: 401 });
   }
+  const profile = await getUserProfile(client, { userId: user.id });
+  if (!profile) throw new Response(null, { status: 403 });
 
   // Get user's organization
   const membership = await getOrganizationMembership(client, {
-    profileId: user.id,
+    profileId: profile.profile_id,
   });
   const organizationId = membership?.organization_id;
 
@@ -72,7 +78,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const [schedules, programs] = await Promise.all([
     getStudentSchedules(client, {
-      studentId: user.id,
+      studentId: profile.profile_id,
       startDate,
       endDate,
     }),
@@ -131,9 +137,7 @@ export default function StudentCalendarScreen({
   const [isEventDetailOpen, setIsEventDetailOpen] = useState(false);
   const fetcher = useFetcher<{ success: boolean; error?: string }>();
   const deleteFetcher = useFetcher<{ success: boolean; error?: string }>();
-  const isLoading =
-    fetcher.state !== "idle" ||
-    deleteFetcher.state !== "idle";
+  const isLoading = fetcher.state !== "idle" || deleteFetcher.state !== "idle";
 
   // Initialize selectedDate to today when switching to mobile
   useEffect(() => {
@@ -331,7 +335,9 @@ export default function StudentCalendarScreen({
         <div className="bg-background/60 fixed inset-0 z-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="text-primary h-8 w-8 animate-spin" />
-            <p className="text-foreground text-sm font-medium">일정 반영 중...</p>
+            <p className="text-foreground text-sm font-medium">
+              일정 반영 중...
+            </p>
           </div>
         </div>
       )}
@@ -698,7 +704,6 @@ export default function StudentCalendarScreen({
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
         </div>
       )}
     </>

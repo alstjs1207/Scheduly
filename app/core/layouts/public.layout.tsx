@@ -2,8 +2,9 @@ import type { Route } from "./+types/public.layout";
 
 import { Outlet, redirect } from "react-router";
 
-import makeServerClient from "../lib/supa-client.server";
 import { isAdmin } from "~/features/admin/guards.server";
+
+import makeServerClient from "../lib/supa-client.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
@@ -16,7 +17,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     const { data: profile } = await client
       .from("profiles")
       .select("is_signup_complete")
-      .eq("profile_id", user.id)
+      .eq("auth_user_id", user.id)
       .single();
 
     if (profile && !profile.is_signup_complete) {

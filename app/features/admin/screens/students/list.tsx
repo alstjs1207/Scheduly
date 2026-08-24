@@ -1,9 +1,11 @@
 import type { Route } from "./+types/list";
 
 import {
+  CheckIcon,
   ChevronRightIcon,
+  ClipboardIcon,
   Clock3Icon,
-  MailIcon,
+  LinkIcon,
   PhoneIcon,
   SearchIcon,
   UserPlusIcon,
@@ -37,15 +39,10 @@ import {
   TableHeader,
   TableRow,
 } from "~/core/components/ui/table";
-import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 
 import { requireAdminRole } from "../../guards.server";
-import {
-  getStudentEmails,
-  getStudentsPaginated,
-  getStudentsTotalHours,
-} from "../../queries";
+import { getStudentsPaginated, getStudentsTotalHours } from "../../queries";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
@@ -76,15 +73,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   // 각 학생의 총 수강시간과 이메일 조회
   const studentIds = result.students.map((s) => s.profile_id);
-  const [totalHours, emails] = await Promise.all([
-    getStudentsTotalHours(client, { organizationId, studentIds }),
-    getStudentEmails(adminClient, { studentIds }),
-  ]);
+  const totalHours = await getStudentsTotalHours(client, {
+    organizationId,
+    studentIds,
+  });
 
   return {
     ...result,
     totalHours,
-    emails,
   };
 }
 
@@ -115,10 +111,83 @@ function formatPhoneNumber(value: string | null) {
   return value;
 }
 
+function InviteLinkDialog({
+  student,
+  onClose,
+}: {
+  student: { id: string; name: string };
+  onClose: () => void;
+}) {
+  const inviteFetcher = useFetcher<{
+    success: boolean;
+    error?: string;
+    inviteUrl?: string;
+    expiresAt?: string;
+  }>();
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>초대 링크 만들기</DialogTitle>
+          <DialogDescription>
+            링크를 복사해 {student.name} 수강생에게 카카오톡으로 전달하세요.
+            링크는 7일 동안 유효하며 한 번만 사용할 수 있습니다.
+          </DialogDescription>
+        </DialogHeader>
+        {inviteFetcher.data?.success === false && (
+          <p className="text-destructive text-sm">{inviteFetcher.data.error}</p>
+        )}
+        {inviteFetcher.data?.success === true && (
+          <p className="text-sm text-green-600">초대 링크가 생성되었습니다.</p>
+        )}
+        {inviteFetcher.data?.inviteUrl && (
+          <div className="flex gap-2">
+            <code className="bg-muted min-w-0 flex-1 truncate rounded-md px-3 py-2 text-xs">
+              {inviteFetcher.data.inviteUrl}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(inviteFetcher.data!.inviteUrl!);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? (
+                <CheckIcon className="size-4" />
+              ) : (
+                <ClipboardIcon className="size-4" />
+              )}
+              <span className="ml-1">{copied ? "복사됨" : "복사"}</span>
+            </Button>
+          </div>
+        )}
+        <DialogFooter>
+          <inviteFetcher.Form
+            method="post"
+            action={`/api/admin/students/${student.id}/invite`}
+          >
+            <Button type="submit" disabled={inviteFetcher.state !== "idle"}>
+              {inviteFetcher.state !== "idle"
+                ? "생성 중..."
+                : inviteFetcher.data?.inviteUrl
+                  ? "새 링크 만들기"
+                  : "링크 만들기"}
+            </Button>
+          </inviteFetcher.Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function StudentListScreen({
   loaderData,
 }: Route.ComponentProps) {
-  const { students, totalCount, totalPages, currentPage, totalHours, emails } =
+  const { students, totalCount, totalPages, currentPage, totalHours } =
     loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inviteStudent, setInviteStudent] = useState<{
@@ -126,7 +195,6 @@ export default function StudentListScreen({
     name: string;
     email?: string;
   } | null>(null);
-  const inviteFetcher = useFetcher<{ success: boolean; error?: string }>();
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -287,9 +355,9 @@ export default function StudentListScreen({
                         ) / 10}
                         시간
                       </span>
-                      {emails[student.profile_id] && (
+                      {student.contact_email && (
                         <span className="truncate">
-                          · {emails[student.profile_id]}
+                          · {student.contact_email}
                         </span>
                       )}
                     </div>
@@ -297,7 +365,7 @@ export default function StudentListScreen({
                   <ChevronRightIcon className="text-muted-foreground mt-2 size-5 shrink-0 transition-transform group-active:translate-x-0.5" />
                 </div>
               </Link>
-              {student.state === "NORMAL" && (
+              {student.state === "NORMAL" && !student.auth_user_id && (
                 <div className="mt-3 flex justify-end border-t pt-2">
                   <Button
                     variant="ghost"
@@ -310,8 +378,8 @@ export default function StudentListScreen({
                       })
                     }
                   >
-                    <MailIcon className="mr-1.5 size-4" />
-                    초대 메일
+                    <LinkIcon className="mr-1.5 size-4" />
+                    초대 링크
                   </Button>
                 </div>
               )}
@@ -328,6 +396,7 @@ export default function StudentListScreen({
               <TableHead className="w-24">상태</TableHead>
               <TableHead className="w-24">유형</TableHead>
               <TableHead>이름</TableHead>
+              <TableHead className="hidden md:table-cell">전화번호</TableHead>
               <TableHead className="hidden md:table-cell">이메일</TableHead>
               <TableHead className="hidden w-28 md:table-cell">
                 총 수강시간
@@ -341,7 +410,7 @@ export default function StudentListScreen({
           <TableBody>
             {students.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center">
+                <TableCell colSpan={9} className="py-8 text-center">
                   등록된 수강생이 없습니다.
                 </TableCell>
               </TableRow>
@@ -371,7 +440,20 @@ export default function StudentListScreen({
                   </TableCell>
                   <TableCell className="font-medium">{student.name}</TableCell>
                   <TableCell className="hidden text-sm md:table-cell">
-                    {emails[student.profile_id] || "-"}
+                    {student.phone ? (
+                      <a
+                        href={`tel:${student.phone.replace(/\D/g, "")}`}
+                        className="font-medium hover:underline"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {formatPhoneNumber(student.phone)}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden text-sm md:table-cell">
+                    {student.contact_email || "-"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {Math.round((totalHours[student.profile_id] || 0) * 10) /
@@ -383,12 +465,12 @@ export default function StudentListScreen({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      {student.state === "NORMAL" && (
+                      {student.state === "NORMAL" && !student.auth_user_id && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className="min-h-11 min-w-11"
-                          aria-label={`${student.name} 초대 이메일 발송`}
+                          aria-label={`${student.name} 초대 링크 생성`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setInviteStudent({
@@ -397,7 +479,7 @@ export default function StudentListScreen({
                             });
                           }}
                         >
-                          <MailIcon className="h-4 w-4" />
+                          <LinkIcon className="h-4 w-4" />
                         </Button>
                       )}
                       <Button
@@ -452,40 +534,13 @@ export default function StudentListScreen({
         </div>
       )}
 
-      <Dialog
-        open={!!inviteStudent}
-        onOpenChange={(open) => !open && setInviteStudent(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>초대 이메일 발송</DialogTitle>
-            <DialogDescription>
-              {inviteStudent?.name} 수강생에게 초대 이메일을 발송하시겠습니까?
-              수강생은 이메일을 통해 비밀번호를 설정하고 로그인할 수 있습니다.
-            </DialogDescription>
-          </DialogHeader>
-          {inviteFetcher.data?.success === false && (
-            <p className="text-destructive text-sm">
-              {inviteFetcher.data.error}
-            </p>
-          )}
-          {inviteFetcher.data?.success === true && (
-            <p className="text-sm text-green-600">
-              초대 이메일이 발송되었습니다.
-            </p>
-          )}
-          <DialogFooter>
-            <inviteFetcher.Form
-              method="post"
-              action={`/api/admin/students/${inviteStudent?.id}/invite`}
-            >
-              <Button type="submit" disabled={inviteFetcher.state !== "idle"}>
-                {inviteFetcher.state !== "idle" ? "발송 중..." : "발송"}
-              </Button>
-            </inviteFetcher.Form>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {inviteStudent && (
+        <InviteLinkDialog
+          key={inviteStudent.id}
+          student={inviteStudent}
+          onClose={() => setInviteStudent(null)}
+        />
+      )}
     </div>
   );
 }

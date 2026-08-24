@@ -1,7 +1,7 @@
 import type { Route } from "./+types/edit";
 
-import { Link } from "react-router";
 import { ChevronLeftIcon } from "lucide-react";
+import { Link } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 import {
@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "~/core/components/ui/card";
-import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 
 import StudentForm from "../../components/student-form";
@@ -22,17 +21,18 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
   const { organizationId } = await requireAdminRole(client);
 
-  const student = await getStudentById(client, { organizationId, studentId: params.studentId });
+  const student = await getStudentById(client, {
+    organizationId,
+    studentId: params.studentId,
+  });
 
-  // auth.users에서 이메일 조회
-  const { data: authUser } = await adminClient.auth.admin.getUserById(params.studentId);
-  const email = authUser?.user?.email;
-
-  return { student, email };
+  return { student };
 }
 
-export default function StudentEditScreen({ loaderData }: Route.ComponentProps) {
-  const { student, email } = loaderData;
+export default function StudentEditScreen({
+  loaderData,
+}: Route.ComponentProps) {
+  const { student } = loaderData;
 
   return (
     <div className="space-y-6">
@@ -43,8 +43,10 @@ export default function StudentEditScreen({ loaderData }: Route.ComponentProps) 
           </Link>
         </Button>
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">수강생 수정</h1>
-          <p className="hidden md:block text-muted-foreground">{student.name}의 정보를 수정합니다.</p>
+          <h1 className="text-xl font-bold md:text-2xl">수강생 수정</h1>
+          <p className="text-muted-foreground hidden md:block">
+            {student.name}의 정보를 수정합니다.
+          </p>
         </div>
       </div>
 
@@ -60,7 +62,7 @@ export default function StudentEditScreen({ loaderData }: Route.ComponentProps) 
             mode="edit"
             defaultValues={{
               profile_id: student.profile_id,
-              email: email || undefined,
+              email: student.contact_email || undefined,
               name: student.name,
               state: student.state,
               type: student.type || undefined,

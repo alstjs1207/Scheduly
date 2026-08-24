@@ -20,6 +20,12 @@ export async function action({ request, params }: Route.ActionArgs) {
     throw redirect("/login");
   }
 
+  const { data: profile } = await client
+    .from("profiles")
+    .select("profile_id")
+    .eq("auth_user_id", user.id)
+    .single();
+
   const { scheduleId } = params;
 
   // Get schedule
@@ -28,7 +34,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   });
 
   // Check if user owns this schedule
-  if (schedule.student_id !== user.id) {
+  if (!profile || schedule.student_id !== profile.profile_id) {
     return data(
       { success: false, error: "이 스케쥴을 취소할 권한이 없습니다." },
       { status: 403 },
@@ -38,7 +44,10 @@ export async function action({ request, params }: Route.ActionArgs) {
   // Check if schedule can be cancelled
   if (!canStudentCancelSchedule(new Date(schedule.start_time))) {
     return data(
-      { success: false, error: "당일 스케쥴은 취소할 수 없습니다. 강사에게 문의해주세요." },
+      {
+        success: false,
+        error: "당일 스케쥴은 취소할 수 없습니다. 강사에게 문의해주세요.",
+      },
       { status: 400 },
     );
   }

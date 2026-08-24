@@ -7,7 +7,6 @@
  */
 import { sql } from "drizzle-orm";
 import {
-  foreignKey,
   pgEnum,
   pgPolicy,
   pgTable,
@@ -15,7 +14,7 @@ import {
   text,
   uuid,
 } from "drizzle-orm/pg-core";
-import { authUid, authUsers, authenticatedRole } from "drizzle-orm/supabase";
+import { authUid, authenticatedRole } from "drizzle-orm/supabase";
 
 import { timestamps } from "~/core/db/helpers";
 import { profiles } from "~/features/users/schema";
@@ -106,7 +105,7 @@ export const organizationMembers = pgTable(
       .references(() => organizations.organization_id, { onDelete: "cascade" }),
     profile_id: uuid("profile_id")
       .notNull()
-      .references(() => authUsers.id, { onDelete: "cascade" }),
+      .references(() => profiles.profile_id, { onDelete: "cascade" }),
     role: userRoleEnum().notNull().default("STUDENT"),
     state: userStateEnum().notNull().default("NORMAL"),
     type: userTypeEnum(),
@@ -115,17 +114,16 @@ export const organizationMembers = pgTable(
   (table) => [
     // Composite primary key
     primaryKey({ columns: [table.organization_id, table.profile_id] }),
-    // Foreign key to profiles for Supabase joins
-    foreignKey({
-      columns: [table.profile_id],
-      foreignColumns: [profiles.profile_id],
-    }).onDelete("cascade"),
     // RLS Policy: Users can view their own memberships
     pgPolicy("select-own-membership-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
+      using: sql`EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.profile_id = ${table.profile_id}
+        AND profiles.auth_user_id = ${authUid}
+      )`,
     }),
     // RLS Policy: Admin can view all memberships in their organization
     pgPolicy("admin-select-org-memberships-policy", {

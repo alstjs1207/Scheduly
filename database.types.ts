@@ -463,11 +463,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_user_id: string | null
           avatar_url: string | null
           birth_date: string | null
           class_end_date: string | null
           class_start_date: string | null
           color: string | null
+          contact_email: string | null
           created_at: string
           description: string | null
           is_signup_complete: boolean
@@ -481,11 +483,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_user_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
           class_end_date?: string | null
           class_start_date?: string | null
           color?: string | null
+          contact_email?: string | null
           created_at?: string
           description?: string | null
           is_signup_complete?: boolean
@@ -494,16 +498,18 @@ export type Database = {
           parent_name?: string | null
           parent_phone?: string | null
           phone?: string | null
-          profile_id: string
+          profile_id?: string
           region?: string | null
           updated_at?: string
         }
         Update: {
+          auth_user_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
           class_end_date?: string | null
           class_start_date?: string | null
           color?: string | null
+          contact_email?: string | null
           created_at?: string
           description?: string | null
           is_signup_complete?: boolean
@@ -517,6 +523,64 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      student_invites: {
+        Row: {
+          created_at: string
+          created_by_profile_id: string
+          expires_at: string
+          invite_id: string
+          organization_id: string
+          profile_id: string
+          revoked_at: string | null
+          token_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_profile_id: string
+          expires_at: string
+          invite_id?: string
+          organization_id: string
+          profile_id: string
+          revoked_at?: string | null
+          token_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_profile_id?: string
+          expires_at?: string
+          invite_id?: string
+          organization_id?: string
+          profile_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_invites_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "student_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "student_invites_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+        ]
       }
       programs: {
         Row: {
@@ -810,6 +874,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_student_invite: {
+        Args: { p_token_hash: string }
+        Returns: string
+      }
+      get_current_profile_id: { Args: never; Returns: string }
       get_user_organization_id: { Args: never; Returns: string }
       is_org_admin: { Args: { org_id: string }; Returns: boolean }
       is_org_member: { Args: { org_id: string }; Returns: boolean }
