@@ -333,11 +333,14 @@ export async function getDashboardStats(
   const monthStart = fromKST(now.year, now.month, 1);
   const monthEnd = fromKST(now.year, now.month + 1, 0, 23, 59, 59);
 
-  // Run all 3 queries in parallel
+  // Run dashboard queries in parallel so the initial setup checklist does not
+  // add extra round trips for new organizations.
   const [
     { data: memberStats, error: memberError },
     { count: todayScheduleCount, error: scheduleError },
     { count: monthlyScheduleCount, error: monthlyError },
+    { count: totalScheduleCount, error: totalScheduleError },
+    { count: activeProgramCount, error: programError },
   ] = await Promise.all([
     client
       .from("organization_members")
@@ -356,6 +359,15 @@ export async function getDashboardStats(
       .eq("organization_id", organizationId)
       .gte("start_time", monthStart.toISOString())
       .lte("start_time", monthEnd.toISOString()),
+    client
+      .from("schedules")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", organizationId),
+    client
+      .from("programs")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("status", "ACTIVE"),
   ]);
 
   if (memberError) {
@@ -366,6 +378,12 @@ export async function getDashboardStats(
   }
   if (monthlyError) {
     throw monthlyError;
+  }
+  if (totalScheduleError) {
+    throw totalScheduleError;
+  }
+  if (programError) {
+    throw programError;
   }
 
   return {
@@ -378,5 +396,7 @@ export async function getDashboardStats(
       memberStats?.filter((s) => s.state === "DELETED").length ?? 0,
     todayScheduleCount: todayScheduleCount ?? 0,
     monthlyScheduleCount: monthlyScheduleCount ?? 0,
+    totalScheduleCount: totalScheduleCount ?? 0,
+    activeProgramCount: activeProgramCount ?? 0,
   };
 }
